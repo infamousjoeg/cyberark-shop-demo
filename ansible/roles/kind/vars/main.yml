@@ -1,0 +1,5 @@
+#SPDX-License-Identifier: MIT-0
+---
+
+cluster_name: demo-poc-cluster-1234567890
+worker_nodes: 0

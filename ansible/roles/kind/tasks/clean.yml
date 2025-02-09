@@ -1,0 +1,12 @@
+---
+
+- name: Remove pre-requisites
+  homebrew:
+    package: "{{ items }}"
+    state: absent
+  with_items:
+    - kind
+    - kubectl
+    - docker
+  tags:
+    - clean

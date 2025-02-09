@@ -1,0 +1,55 @@
+#SPDX-License-Identifier: MIT-0
+---
+# ####################################################################
+#                             Prechecks
+# ####################################################################
+
+- name: Prechecks
+  include_tasks: precheck.yml
+  tags:
+    - always
+
+# ####################################################################
+#                             Prerequisites
+# ####################################################################
+
+- name: Prerequisites
+  include_tasks: prerequisites.yml
+  tags:
+    - install
+
+# ####################################################################
+#                             Install kind
+# ####################################################################
+
+- name: Install kind
+  include_tasks: install.yml
+  tags:
+    - install
+
+# ####################################################################
+#                             Create cluster
+# ####################################################################
+
+- name: Create cluster {{ cluster_name }}
+  include_tasks: create-cluster.yml
+  tags:
+    - create
+
+# ####################################################################
+#                             Delete cluster
+# ####################################################################
+
+- name: Delete cluster {{ cluster_name }}
+  include_tasks: delete-cluster.yml
+  tags:
+    - delete
+
+# ####################################################################
+#                             Clean dependencies
+# ####################################################################
+
+- name: Clean up dependencies
+  include_tasks: clean.yml
+  tags:
+    - clean

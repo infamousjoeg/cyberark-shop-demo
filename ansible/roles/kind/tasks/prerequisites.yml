@@ -1,0 +1,24 @@
+---
+
+- name: Ensure docker installed
+  command:
+    cmd: docker --version
+  register: docker_valid
+  ignore_errors: yes
+  tags:
+    - install
+
+- name: Install docker via Homebrew
+  homebrew:
+    name: docker
+    state: present
+  when: docker_valid.failed
+  tags:
+    - install
+
+- name: Ensure kubectl installed
+  homebrew:
+    package: kubectl
+    state: present
+  tags:
+    - install
