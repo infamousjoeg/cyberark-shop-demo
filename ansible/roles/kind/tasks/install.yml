@@ -1,0 +1,8 @@
+---
+
+- name: Install kind via Homebrew
+  homebrew:
+    package: kind
+    state: present
+  tags:
+    - install

@@ -1,0 +1,8 @@
+---
+
+- name: Check if OS distribution is some Darwin kind
+  fail:
+    msg: "OS distribution {{ ansible_os_family }} is not Darwin (macOS) family!"
+  when: (not ansible_os_family == 'Darwin')
+  tags:
+    - always
