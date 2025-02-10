@@ -1,0 +1,51 @@
+---
+- name: Create ServiceAccount for Venafi Private Registry
+  hosts: "{{ HOSTS | default('localhost') }}"
+  vars_files:
+    - "{{ playbook_dir }}/vars/vars.yml"
+
+  tasks:
+
+    - name: Create Venafi service account for Firefly
+      ansible.builtin.command:
+        cmd: >
+          venctl iam service-accounts firefly create
+          --name "demo-firefly-{{ resource_suffix }}"
+          --output-file "artifacts/venafi-install/venafi_firefly_secret.json"
+          --output "secret"
+          --owning-team "{{ ven_team_name }}"
+          --validity 10
+          --api-key "{{ ven_cloud_api_key }}"
+      register: venafi_firefly_result
+      changed_when: "'Created' in venafi_firefly_result.stdout"
+
+    - name: Extract private_key from JSON and save as YAML
+      ansible.builtin.command:
+        cmd: jq -r '.private_key' artifacts/venafi-install/venafi_firefly_secret.json
+      register: firefly_private_key_result
+      changed_when: firefly_private_key_result.stdout != ""
+
+    - name: Write private_key to YAML file
+      ansible.builtin.copy:
+        content: "{{ firefly_private_key_result.stdout }}"
+        dest: "artifacts/venafi-install/venafi_firefly_secret.yaml"
+        mode: '0644'
+
+    - name: Extract client_id from JSON and save to text file
+      ansible.builtin.command:
+        cmd: jq -r '.client_id' artifacts/venafi-install/venafi_firefly_secret.json
+      register: firefly_client_id_result
+      changed_when: firefly_client_id_result.stdout != ""
+
+    - name: Write client_id to text file
+      ansible.builtin.copy:
+        content: "{{ firefly_client_id_result.stdout }}"
+        dest: "artifacts/venafi-install/venafi_firefly_client_id.txt"
+        mode: '0644'
+
+    - name: Apply Kubernetes Firefly secret
+      community.kubernetes.k8s:
+        state: present
+        namespace: venafi
+        src: "artifacts/venafi-install/venafi_firefly_secret.yaml"
+      ignore_errors: yes  # To match `|| true` behavior from Makefile
