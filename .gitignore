@@ -1,4 +1,4 @@
-ansible/playbooks/vars/vars.yml
-.lock
-settings.json
+.ansible
+.vscode
 artifacts/
+ansible/playbooks/vars/vars.yml
