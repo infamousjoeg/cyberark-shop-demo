@@ -3,3 +3,18 @@
 
 cluster_name: demo-poc-cluster-1234567890
 worker_nodes: 0
+docker_images: [
+  "nginx:latest",
+  "sitaramiyer222/redis:alpine",
+  "sitaramiyer222/adservice:v0.10.2.0124202501",
+  "sitaramiyer222/cartservice:v0.10.2.0124202501",
+  "sitaramiyer222/checkoutservice:v0.10.2.0124202501",
+  "sitaramiyer222/currencyservice:v0.10.2.0124202501",
+  "sitaramiyer222/emailservice:v0.10.2.0124202501",
+  "sitaramiyer222/frontend:v0.10.2.0124202501",
+  "sitaramiyer222/paymentservice:v0.10.2.0124202501",
+  "sitaramiyer222/productcatalogservice:v0.10.2.0124202501",
+  "sitaramiyer222/recommendationservice:v0.10.2.0124202501",
+  "sitaramiyer222/shippingservice:v0.10.2.0124202501",
+  "sitaramiyer222/cartservice:v0.10.2.0124202501"
+]
