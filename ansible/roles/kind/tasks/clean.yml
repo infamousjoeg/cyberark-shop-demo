@@ -4,7 +4,7 @@
   homebrew:
     package: "{{ items }}"
     state: absent
-  with_items:
+  loop:
     - kind
     - kubectl
     - docker
