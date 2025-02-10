@@ -37,7 +37,7 @@ A microservice digital store demonstration integrated with CyberArk's Identity S
 |---|---|
 |install|Installs docker, kubectl, kind|
 |create|Creates kind cluster|
-|load|Load docker_images from [vars](roles/kind/vars/main.yml)|
+|load|Load docker_images from [vars](ansible/roles/kind/vars/main.yml)|
 |delete|Deletes kind cluster|
 |clean|Clean up docker, kubectl, kind|
 
