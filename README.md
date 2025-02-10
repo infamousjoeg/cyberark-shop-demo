@@ -4,30 +4,27 @@ A microservice digital store demonstration integrated with CyberArk's Identity S
 
 ## Table of Contents <!-- omit in toc -->
 - [Quick Start](#quick-start)
-  - [Optional](#optional)
-    - [Load Docker images](#load-docker-images)
-    - [Remove kind, kubectl, docker](#remove-kind-kubectl-docker)
 - [Ansible kind Role](#ansible-kind-role)
   - [Usage based on Tags](#usage-based-on-tags)
     - [Example Usage](#example-usage)
+- [Ansible Playbooks](#ansible-playbooks)
+  - [init.yml](#inityml)
+  - [create-sa-discovery.yml](#create-sa-discoveryyml)
+  - [create-sa-registry.yml](#create-sa-registryyml)
+  - [create-sa-firefly.yml](#create-sa-fireflyyml)
 - [License](#license)
 
 ## Quick Start
 
 1. `brew install ansible`
-2. `ansible-playbook ansible/kind.yml --tags "install, create"`
+2. `ansible-playbook ansible/playbooks/kind.yml --tags "install, create, load"`
 3. `docker ps`
-4. `ansible-playbook ansible/kind.yml --tags "delete"`
-
-### Optional
-
-#### Load Docker images
-
-`ansible-playbook ansible/kind.yml --tags "load"`
-
-#### Remove kind, kubectl, docker
-
-`ansible-playbook ansible/kind.yml --tags "clean"`
+4. `cp ansible/playbooks/vars/vars.template.yml ansible/playbooks/vars/vars.yml`
+5. Update values in [vars.yml](ansible/playbooks/vars/vars.yml).
+6. `ansible-playbook ansible/playbooks/init.yml`
+7. `ansible-playbook ansible/playbooks/create-sa-discovery.yml`
+8. `ansible-playbook ansible/playbooks/create-sa-registry.yml`
+9. `ansible-playbook ansible/playbooks/create-sa-firefly.yml`
 
 ## Ansible kind Role
 
@@ -44,6 +41,40 @@ A microservice digital store demonstration integrated with CyberArk's Identity S
 #### Example Usage
 
 `ansible-playbook ansible/kind.yml --tags "install, create, load"`
+
+## Ansible Playbooks
+
+### init.yml
+
+This playbook will initialize the workspace, install or upgrade venctl, and create namespaces in the kind cluster.
+
+Uses variables from [ansible/playbooks/vars/vars.yml]().
+
+`ansible-playbook ansible/playbooks/init.yml`
+
+### create-sa-discovery.yml
+
+This playbook creates a service account in Venafi Control Plane to access discovery and adds the details to a Kubernetes Secret in kind.
+
+Uses variables from [ansible/playbooks/vars/vars.yml]().
+
+`ansible-playbook ansible/playbooks/create-sa-discovery.yml`
+
+### create-sa-registry.yml
+
+This playbook creates a service account in Venafi Control Plane to access the private image registry for Venafi and adds the details to a Kubernetes Secret in kind.
+
+Uses variables from [ansible/playbooks/vars/vars.yml]().
+
+`ansible-playbook ansible/playbooks/create-sa-registry.yml`
+
+### create-sa-firefly.yml
+
+This playbook creates a service account in Venafi Control Plane for Firefly to authenticate with and adds the details to a Kubernetes Secret in kind.
+
+Uses variables from [ansible/playbooks/vars/vars.yml]().
+
+`ansible-playbook ansible/playbooks/create-sa-firefly.yml`
 
 ## License
 [MIT](LICENSE)

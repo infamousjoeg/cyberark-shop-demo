@@ -1,0 +1,40 @@
+---
+- name: Create ServiceAccount for Venafi Private Registry
+  hosts: "{{ HOSTS | default('localhost') }}"
+  vars_files:
+    - "{{ playbook_dir }}/vars/vars.yml"
+
+  tasks:
+
+    - name: Create Venafi service account for registry secret
+      ansible.builtin.command:
+        cmd: >
+          venctl iam service-account registry create
+          --name "demo-secret-{{ resource_suffix }}"
+          --output-file "artifacts/venafi-install/venafi_registry_secret.json"
+          --output "secret"
+          --owning-team "{{ ven_team_name }}"
+          --validity 10
+          --scopes enterprise-cert-manager,enterprise-approver-policy,enterprise-venafi-issuer
+          --api-key "{{ ven_cloud_api_key }}"
+      register: venafi_registry_result
+      changed_when: "'Created' in venafi_registry_result.stdout"
+
+    - name: Extract image_pull_secret from JSON and save as YAML
+      ansible.builtin.command:
+        cmd: jq -r '.image_pull_secret' artifacts/venafi-install/venafi_registry_secret.json
+      register: registry_secret_result
+      changed_when: registry_secret_result.stdout != ""
+
+    - name: Write registry secret to YAML file
+      ansible.builtin.copy:
+        content: "{{ registry_secret_result.stdout }}"
+        dest: "artifacts/venafi-install/venafi_registry_secret.yaml"
+        mode: '0644'
+
+    - name: Apply Kubernetes registry secret
+      community.kubernetes.k8s:
+        state: present
+        namespace: venafi
+        src: "artifacts/venafi-install/venafi_registry_secret.yaml"
+      ignore_errors: yes  # To match `|| true` behavior from Makefile

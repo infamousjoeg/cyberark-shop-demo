@@ -1,0 +1,4 @@
+ansible/playbooks/vars/vars.yml
+.lock
+settings.json
+artifacts/
