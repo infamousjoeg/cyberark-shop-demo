@@ -16,15 +16,7 @@ A microservice digital store demonstration integrated with CyberArk's Identity S
 
 ## Quick Start
 
-1. `brew install ansible`
-2. `ansible-playbook ansible/playbooks/kind.yml --tags "install, create, load"`
-3. `docker ps`
-4. `cp ansible/playbooks/vars/vars.template.yml ansible/playbooks/vars/vars.yml`
-5. Update values in [vars.yml](ansible/playbooks/vars/vars.yml).
-6. `ansible-playbook ansible/playbooks/init.yml`
-7. `ansible-playbook ansible/playbooks/create-sa-discovery.yml`
-8. `ansible-playbook ansible/playbooks/create-sa-registry.yml`
-9. `ansible-playbook ansible/playbooks/create-sa-firefly.yml`
+`./start.sh`
 
 ## Ansible kind Role
 
