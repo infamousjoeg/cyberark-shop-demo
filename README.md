@@ -7,16 +7,42 @@ A microservice digital store demonstration integrated with CyberArk's Identity S
 - [Ansible kind Role](#ansible-kind-role)
   - [Usage based on Tags](#usage-based-on-tags)
     - [Example Usage](#example-usage)
-- [Ansible Playbooks](#ansible-playbooks)
-  - [init.yml](#inityml)
-  - [create-sa-discovery.yml](#create-sa-discoveryyml)
-  - [create-sa-registry.yml](#create-sa-registryyml)
-  - [create-sa-firefly.yml](#create-sa-fireflyyml)
 - [License](#license)
 
 ## Quick Start
 
 `./start.sh`
+
+This will prompt a menu for you to choose from:
+
+```plaintext
+=============================================
+WELCOME TO THE CYBERARK SHOP DEPLOYMENT SETUP
+=============================================
+
+This script will execute the following steps:
+
+1. Install & Create kind Cluster
+2. Install dependencies (venctl, jq, etc.)
+3. Create necessary directories
+4. Deploy service accounts
+5. Setup Kubernetes namespaces
+6. Generate Venafi manifests
+7. Deploy Venafi components
+8. Setup Venafi Cloud integration
+9. Deploy sandbox resources
+10. Create Unmanaged Kid in Nginx
+11. Create Expiry Eddie - Long Duration Cert
+12. Create Cipher-Snake - Bad Key Size
+13. Create Ghost-Rider - Orphan Cert
+14. Create Phantom-CA & Certificate
+15. Setup Istio Service Mesh Apps
+
+Before continuing, please review and modify any necessary variables in:
+  → ansible/playbooks/vars/vars.yml
+
+Enter a number to start from a specific section, or press [ENTER] to start from the beginning:
+```
 
 ## Ansible kind Role
 
@@ -26,47 +52,12 @@ A microservice digital store demonstration integrated with CyberArk's Identity S
 |---|---|
 |install|Installs docker, kubectl, kind|
 |create|Creates kind cluster|
-|load|Load docker_images from [vars](ansible/roles/kind/vars/main.yml)|
 |delete|Deletes kind cluster|
 |clean|Clean up docker, kubectl, kind|
 
 #### Example Usage
 
-`ansible-playbook ansible/kind.yml --tags "install, create, load"`
-
-## Ansible Playbooks
-
-### init.yml
-
-This playbook will initialize the workspace, install or upgrade venctl, and create namespaces in the kind cluster.
-
-Uses variables from [ansible/playbooks/vars/vars.yml]().
-
-`ansible-playbook ansible/playbooks/init.yml`
-
-### create-sa-discovery.yml
-
-This playbook creates a service account in Venafi Control Plane to access discovery and adds the details to a Kubernetes Secret in kind.
-
-Uses variables from [ansible/playbooks/vars/vars.yml]().
-
-`ansible-playbook ansible/playbooks/create-sa-discovery.yml`
-
-### create-sa-registry.yml
-
-This playbook creates a service account in Venafi Control Plane to access the private image registry for Venafi and adds the details to a Kubernetes Secret in kind.
-
-Uses variables from [ansible/playbooks/vars/vars.yml]().
-
-`ansible-playbook ansible/playbooks/create-sa-registry.yml`
-
-### create-sa-firefly.yml
-
-This playbook creates a service account in Venafi Control Plane for Firefly to authenticate with and adds the details to a Kubernetes Secret in kind.
-
-Uses variables from [ansible/playbooks/vars/vars.yml]().
-
-`ansible-playbook ansible/playbooks/create-sa-firefly.yml`
+`ansible-playbook ansible/kind.yml --tags "install, create"`
 
 ## License
 [MIT](LICENSE)

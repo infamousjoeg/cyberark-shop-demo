@@ -1,0 +1,67 @@
+- name: Deploy Phantom CA and Certificate
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Apply Cert Policy and RBAC Self-Signed
+      kubernetes.core.k8s:
+        state: present
+        src: files/samples/cert-policy-and-rbac-self-signed.yaml
+
+    - name: Apply Phantom CA Certificate
+      kubernetes.core.k8s:
+        state: present
+        src: files/samples/05-phantom-ca-cert.yaml
+
+    - name: Deploy Phantom CA Issued Nginx Service
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: phantom-ca-issued-nginx
+            namespace: sandbox
+          spec:
+            type: NodePort
+            ports:
+              - port: 80
+            selector:
+              app: phantom-ca-issued-nginx
+
+    - name: Deploy Phantom CA Issued Nginx Deployment
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            labels:
+              app: phantom-ca-issued-nginx
+            name: phantom-ca-issued-nginx
+            namespace: sandbox
+          spec:
+            replicas: 2
+            selector:
+              matchLabels:
+                app: phantom-ca-issued-nginx
+            strategy:
+              type: Recreate
+            template:
+              metadata:
+                labels:
+                  app: phantom-ca-issued-nginx
+              spec:
+                containers:
+                  - image: nginx:latest
+                    name: phantom-ca-issued-nginx
+                    volumeMounts:
+                      - mountPath: "/etc/phantom-ca-issued-nginx/ssl"
+                        name: phantom-ca-issued-nginx-ssl
+                        readOnly: true
+                    ports:
+                      - containerPort: 80
+                volumes:
+                  - name: phantom-ca-issued-nginx-ssl
+                    secret:
+                      secretName: phantom-ca-issued.svc.cluster.local
+                restartPolicy: Always

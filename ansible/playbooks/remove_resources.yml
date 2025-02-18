@@ -1,0 +1,38 @@
+---
+- name: Remove Venafi Resources
+  hosts: localhost
+  gather_facts: no
+  vars_files:
+    - vars/vars.yml
+  tasks:
+    - name: Delete venafi Namespace
+      kubernetes.core.k8s:
+        state: absent
+        namespace: venafi
+        src: "files/namespaces/venafi.yaml"
+      ignore_errors: yes
+
+    - name: Delete sandbox Namespace
+      kubernetes.core.k8s:
+        state: absent
+        namespace: sandbox
+        src: "files/namespaces/sandbox.yaml"
+      ignore_errors: yes
+
+    - name: Delete artifacts Directory
+      ansible.builtin.file:
+        state: absent
+        name: "files/artifacts"
+
+    - name: Delete mesh-apps Namespace
+      kubernetes.core.k8s:
+        state: absent
+        namespace: mesh-apps
+        src: "https://raw.githubusercontent.com/sitaramkm/microservices-demo/refs/heads/main/release/kubernetes-manifests.yaml"
+      ignore_errors: yes
+
+    - name: Delete kind Cluster
+      ansible.builtin.command:
+        cmd: kind delete cluster --name "demo-poc-cluster-{{ resource_suffix }}"
+      register: kind_result
+      changed_when: "'Deleted nodes:' in kind_result.stdout"

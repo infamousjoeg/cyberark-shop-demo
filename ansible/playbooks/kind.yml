@@ -1,4 +1,4 @@
 - hosts: "{{ HOSTS | default('localhost') }}"
 
   roles:
-   - roles/kind
+   - ../roles/kind

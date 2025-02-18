@@ -2,7 +2,7 @@
 collections:
   - name: community.general
   - name: community.docker
-  - name: community.kubernetes
+  - name: kubernetes.core
   - name: cyberark.pas
   - name: cyberark.conjur
   - name: venafi.machine_identity

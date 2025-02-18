@@ -1,0 +1,56 @@
+---
+- name: Generate Venafi Manifests
+  hosts: localhost
+  gather_facts: no
+  vars_files:
+    - vars/vars.yml
+  tasks:
+    - name: Create Venafi agent config for cloud
+      ansible.builtin.template:
+        src: files/templates/helm/venafi-agent.yaml.j2
+        dest: files/artifacts/venafi-install/venafi-agent.yaml
+        mode: "0644"
+      vars:
+        cluster_name: "demo-poc-cluster-{{ resource_suffix }}"
+
+    - name: Copy cloud VEI config for deployment
+      ansible.builtin.copy:
+        src: files/templates/helm/cloud-vei-values.yaml.j2
+        dest: files/artifacts/venafi-install/vei-values.yaml
+        mode: "0644"
+
+    - name: Generate Venafi Helm manifests
+      ansible.builtin.command:
+        cmd: |
+          venctl components kubernetes manifest generate
+          --namespace venafi
+          --approver-policy-enterprise
+          --approver-policy-enterprise-version {{ approver_policy_enterprise_version }}
+          --cert-manager
+          --cert-manager-version {{ cert_manager_version }}
+          --csi-driver
+          --csi-driver-version {{ csi_driver_version }}
+          --csi-driver-spiffe
+          --csi-driver-spiffe-version {{ csi_driver_spiffe_version }}
+          --accept-firefly-tos
+          --firefly
+          --firefly-version {{ firefly_version }}
+          --trust-manager
+          --trust-manager-version {{ trust_manager_version }}
+          --venafi-connection
+          --venafi-connection-version {{ venafi_connection_version }}
+          --venafi-enhanced-issuer
+          --venafi-enhanced-issuer-version {{ venafi_enhanced_issuer_version }}
+          --venafi-kubernetes-agent
+          --venafi-kubernetes-agent-version {{ venafi_kubernetes_agent_version }}
+          --venafi-enhanced-issuer-values-files {{ playbook_dir }}/files/artifacts/venafi-install/vei-values.yaml
+          --venafi-kubernetes-agent-values-files {{ playbook_dir }}/files/artifacts/venafi-install/venafi-agent.yaml
+          --image-pull-secret-names venafi-image-pull-secret
+      register: venafi_manifest_output
+      changed_when: venafi_manifest_output.rc == 0
+
+    - name: Save Venafi Helm manifest output to file
+      ansible.builtin.copy:
+        content: "{{ venafi_manifest_output.stdout }}"
+        dest: "files/artifacts/venafi-install/venafi-manifests.yaml"
+        mode: '0644'

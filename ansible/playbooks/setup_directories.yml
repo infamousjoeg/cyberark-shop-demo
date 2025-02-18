@@ -1,0 +1,19 @@
+---
+- name: Setup Required Directories
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Delete pre-existing directories
+      ansible.builtin.file:
+        path: "artifacts"
+        state: absent
+
+    - name: Create necessary directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "files/artifacts/venafi-install"
+        - "files/artifacts/config"
+        - "files/artifacts/samples"

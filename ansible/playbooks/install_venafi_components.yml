@@ -1,0 +1,34 @@
+---
+- name: Install Venafi Components Using venctl
+  hosts: localhost
+  gather_facts: no
+  environment:
+    VENAFI_KUBERNETES_AGENT_CLIENT_ID: "{{ lookup('file', 'files/artifacts/venafi-install/venafi_agent_client_id.txt') }}"
+    FIREFLY_VENAFI_CLIENT_ID: "{{ lookup('file', 'files/artifacts/venafi-install/venafi_firefly_client_id.txt') }}"
+  tasks:
+    - name: Load Firefly Agent Client ID from file
+      ansible.builtin.set_fact:
+        firefly_agent_client_id: "{{ lookup('file', 'files/artifacts/venafi-install/venafi_firefly_client_id.txt') }}"
+
+    - name: Prompt user for Firefly configuration confirmation
+      ansible.builtin.pause:
+        prompt: "Have you attached the Firefly service account ({{ firefly_agent_client_id }}) to your config in the UI? [y/N]"
+      register: firefly_confirmation
+
+    - name: Fail if Firefly service account is not confirmed
+      ansible.builtin.fail:
+        msg: |
+          ######################################################################
+          The Firefly Config in the UI needs to be associated with the service
+          account name that maps to client ID {{ firefly_agent_client_id }}
+          ######################################################################
+      when: firefly_confirmation.user_input | lower != 'y'
+
+    - name: Apply Venafi Helm Manifest
+      ansible.builtin.command:
+        cmd: >
+          venctl components kubernetes manifest tool sync --file files/artifacts/venafi-install/venafi-manifests.yaml
+      environment:
+        CSI_DRIVER_SPIFFE_TRUST_DOMAIN: "cluster.local"
+      register: venctl_apply
+      changed_when: "'Synchronization complete' in venctl_apply.stdout"

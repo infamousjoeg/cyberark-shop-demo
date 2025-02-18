@@ -1,4 +1,6 @@
 .ansible
 .vscode
-artifacts/
+venafi-root-ca.pem
+venafi-root-ca.key
+ansible/playbooks/files/artifacts/
 ansible/playbooks/vars/vars.yml

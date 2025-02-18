@@ -1,0 +1,40 @@
+---
+- name: Deploy resources to the Sandbox namespace
+  hosts: localhost
+  gather_facts: no
+  vars_files:
+    - vars/vars.yml
+  tasks:
+    - name: Ensure jq is installed
+      community.general.homebrew:
+        name: jq
+        state: present
+
+    - name: Pull nginx:latest Docker image
+      community.docker.docker_image:
+        name: nginx:latest
+        source: pull
+
+    - name: Load nginx:latest into Kind cluster
+      ansible.builtin.command:
+        cmd: "kind load docker-image nginx:latest --name demo-poc-cluster-{{ resource_suffix }}"
+      register: kind_load_result
+      changed_when: "'Image: ' in kind_load_result.stdout"
+
+    - name: Ensure Sandbox namespace exists
+      kubernetes.core.k8s:
+        state: present
+        namespace: sandbox
+        src: "files/namespaces/sandbox.yaml"
+
+    - name: Apply Certificate Policy for Sandbox
+      kubernetes.core.k8s:
+        state: present
+        namespace: sandbox
+        src: "files/templates/common/cert-policy-and-rbac.yaml"
+
+    - name: Deploy Sample Certificates to Sandbox
+      kubernetes.core.k8s:
+        state: present
+        namespace: sandbox
+        src: "files/samples/sample-firefly-certificates.yaml"

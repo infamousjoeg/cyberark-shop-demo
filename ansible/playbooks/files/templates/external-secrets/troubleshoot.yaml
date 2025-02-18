@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: default-sa
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jwks-retrieve
+data:
+  jwks.sh: |
+    #!/bin/bash
+    TOKEN=$(cat /run/secrets/kubernetes.io/serviceaccount/token)
+    JWKS=$(curl -s --cacert /run/secrets/kubernetes.io/serviceaccount/ca.crt -H "Authorization: Bearer $TOKEN" https://172.22.0.2:6443/openid/v1/jwks)
+    echo $JWKS
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: curl
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      role: demo
+      app: k8ssecrets
+  template:
+    metadata:
+      labels:
+        role: demo
+        app: k8ssecrets
+    spec:
+      containers:
+      - name: k8s-app
+        image: centos
+        command: ["sleep","infinity"]
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+          - name: scripts
+            mountPath: /scripts
+      volumes:
+      - name: scripts
+        configMap:
+          name: jwks-retrieve 
+          defaultMode: 0755

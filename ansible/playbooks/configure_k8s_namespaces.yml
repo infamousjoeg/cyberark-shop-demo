@@ -1,0 +1,34 @@
+---
+- name: Apply Kubernetes Namespaces
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Apply Venafi Namespace
+      kubernetes.core.k8s:
+        state: present
+        namespace: venafi
+        src: "files/namespaces/venafi.yaml"
+
+    - name: Apply Sandbox Namespace
+      kubernetes.core.k8s:
+        state: present
+        namespace: sandbox
+        src: "files/namespaces/sandbox.yaml"
+
+    - name: Apply Discovery Secret to Kubernetes
+      kubernetes.core.k8s:
+        state: present
+        namespace: venafi
+        src: "files/artifacts/venafi-install/venafi_agent_secret.yaml"
+
+    - name: Apply Registry Secret to Kubernetes
+      kubernetes.core.k8s:
+        state: present
+        namespace: venafi
+        src: "files/artifacts/venafi-install/venafi_registry_secret.yaml"
+
+    - name: Apply Firefly Secret to Kubernetes
+      kubernetes.core.k8s:
+        state: present
+        namespace: venafi
+        src: "files/artifacts/venafi-install/venafi_firefly_secret.yaml"
