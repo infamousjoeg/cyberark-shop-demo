@@ -3,13 +3,23 @@
 A microservice digital store demonstration integrated with CyberArk's Identity Security Platform and Venafi's Cloud Control Plane.
 
 ## Table of Contents <!-- omit in toc -->
-- [Quick Start](#quick-start)
+- [Pre-Requisites](#pre-requisites)
+- [Usage](#usage)
 - [Ansible kind Role](#ansible-kind-role)
   - [Usage based on Tags](#usage-based-on-tags)
     - [Example Usage](#example-usage)
 - [License](#license)
 
-## Quick Start
+## Pre-Requisites
+
+- [Ansible](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html#selecting-an-ansible-package-and-version-to-install)
+  - Kubernetes Ansible Module
+    - `python3 -m pip install kubernetes`
+  - Cryptography Ansible Module
+    - `python3 -m pip install cryptography`
+- [Venafi Control Plane](https://venafi.com/try-venafi/tls-protect-for-kubernetes/)
+
+## Usage
 
 `./start.sh`
 
@@ -45,6 +55,8 @@ Enter a number to start from a specific section, or press [ENTER] to start from 
 ```
 
 ## Ansible kind Role
+
+As part of this project, an Ansible Role for managing Kubernetes-in-Docker (KinD) has been developed.
 
 ### Usage based on Tags
 

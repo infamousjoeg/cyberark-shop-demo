@@ -11,7 +11,7 @@
   tasks:
     - name: Ensure artifacts directory exists
       ansible.builtin.file:
-        path: "artifacts/samples"
+        path: "files/artifacts/samples"
         state: directory
         mode: '0755'
 

@@ -7,8 +7,8 @@
 
     kubectl -n sandbox create secret tls \
         cipher-snake.svc.cluster.local \
-        --key="artifacts/samples/cipher-snake.svc.cluster.local.key" \
-        --cert="artifacts/samples/cipher-snake.svc.cluster.local.crt" 
+        --key="files/artifacts/samples/cipher-snake.svc.cluster.local.key" \
+        --cert="files/artifacts/samples/cipher-snake.svc.cluster.local.crt" 
 
 
 kubectl apply -f - <<EOF

@@ -7,8 +7,8 @@
 
   kubectl -n sandbox create secret tls \
         unmanaged-kid.svc.cluster.local \
-        --key="artifacts/samples/unmanaged-kid.svc.cluster.local.key" \
-        --cert="artifacts/samples/unmanaged-kid.svc.cluster.local.crt" 
+        --key="files/artifacts/samples/unmanaged-kid.svc.cluster.local.key" \
+        --cert="files/artifacts/samples/unmanaged-kid.svc.cluster.local.crt" 
 
 kubectl apply -f - <<EOF
 apiVersion: v1

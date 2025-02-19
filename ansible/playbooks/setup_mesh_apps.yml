@@ -23,17 +23,6 @@
         namespace: "mesh-apps"
         src: "files/namespaces/mesh-apps.yaml"
 
-    - name: Pull Docker images
-      community.docker.docker_image:
-        name: "{{ item }}"
-        source: pull
-      loop: "{{ mesh_docker_images }}"
-
-    - name: Load Docker images into kind cluster
-      command:
-        cmd: "kind load docker-image {{ item }} --name demo-poc-cluster-{{ resource_suffix }}"
-      loop: "{{ mesh_docker_images }}"
-
     - name: Create Venafi Trust Anchor Secret
       kubernetes.core.k8s:
         state: present
@@ -147,7 +136,6 @@
         values:
           global:
             caAddress: "cert-manager-istio-csr.venafi.svc:443"
-          meshConfig:
             trustDomain: "cluster.local"
           components:
             pilot:
@@ -162,7 +150,10 @@
         chart_ref: istio/gateway
         release_namespace: istio-system
         create_namespace: yes
-        wait: yes
+        #wait: yes
+        values:
+          global:
+            caAddress: "cert-manager-istio-csr.venafi.svc:443"
 
     - name: Install Istio Egress Gateway
       kubernetes.core.helm:
@@ -170,7 +161,7 @@
         chart_ref: istio/gateway
         release_namespace: istio-system
         create_namespace: yes
-        wait: yes
+        #wait: yes
         values:
           global:
             caAddress: "cert-manager-istio-csr.venafi.svc:443"
@@ -187,10 +178,22 @@
         namespace: "istio-system"
         src: "files/artifacts/venafi-install/peerauthentication.yaml"
 
+    - name: Pull Docker images
+      community.docker.docker_image:
+        name: "{{ item }}"
+        source: pull
+      loop: "{{ mesh_docker_images }}"
+
+    - name: Load Docker images into kind cluster
+      command:
+        cmd: "kind load docker-image {{ item }} --name demo-poc-cluster-{{ resource_suffix }}"
+      loop: "{{ mesh_docker_images }}"
+
+
     - name: Apply Kiali Add-on
       kubernetes.core.k8s:
         state: present
-        src: "https://raw.githubusercontent.com/istio/istio/refs/heads/release-1.24/samples/addons/{{ items }}.yaml"
+        src: "https://raw.githubusercontent.com/istio/istio/refs/heads/release-1.24/samples/addons/{{ item }}.yaml"
       loop:
         - kiali
         - prometheus
