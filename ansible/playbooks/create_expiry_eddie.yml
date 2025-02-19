@@ -1,5 +1,6 @@
 - name: Generate and deploy expiry-eddie certificate
   hosts: localhost
+  connection: local
   gather_facts: false
   tasks:
     - name: Generate RSA private key

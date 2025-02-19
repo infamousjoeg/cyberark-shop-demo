@@ -1,6 +1,7 @@
 ---
 - name: Install Required Dependencies
   hosts: localhost
+  connection: local
   gather_facts: no
   tasks:
     - name: Ensure jq is installed

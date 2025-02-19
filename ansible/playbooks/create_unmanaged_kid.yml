@@ -1,6 +1,7 @@
 ---
 - name: Deploy unmanaged-kid Nginx with TLS in Kubernetes
   hosts: localhost
+  connection: local
   gather_facts: false
   vars:
     cert_path: "files/artifacts/samples/unmanaged-kid.svc.cluster.local.crt"

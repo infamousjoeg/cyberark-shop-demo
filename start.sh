@@ -65,21 +65,21 @@ START_INDEX=$?
 
 # Playbook commands corresponding to each step
 PLAYBOOKS=(
-  "ansible-playbook '$PLAYBOOK_DIR/kind.yml' --tags 'install, create'"
-  "ansible-galaxy collection install -r '$ANSIBLE_DIR/requirements.yml' && ansible-playbook '$PLAYBOOK_DIR/install_dependencies.yml'"
-  "ansible-playbook '$PLAYBOOK_DIR/setup_directories.yml'"
-  "ansible-playbook '$PLAYBOOK_DIR/create_service_accounts.yml'"
-  "ansible-playbook '$PLAYBOOK_DIR/configure_k8s_namespaces.yml'"
-  "ansible-playbook '$PLAYBOOK_DIR/generate_manifests.yml'"
-  "ansible-playbook '$PLAYBOOK_DIR/install_venafi_components.yml'"
-  "ansible-playbook '$PLAYBOOK_DIR/setup_cloud_integration.yml'"
-  "ansible-playbook '$PLAYBOOK_DIR/setup_sandbox.yml'"
-  "ansible-playbook '$PLAYBOOK_DIR/create_unmanaged_kid.yml'"
-  "ansible-playbook '$PLAYBOOK_DIR/create_expiry_eddie.yml'"
-  "ansible-playbook '$PLAYBOOK_DIR/create_cipher-snake.yml'"
-  "ansible-playbook '$PLAYBOOK_DIR/create_ghost-rider.yml'"
-  "ansible-playbook '$PLAYBOOK_DIR/create_phantom-ca.yml'"
-  "ansible-playbook '$PLAYBOOK_DIR/setup_mesh_apps.yml'"
+  "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/kind.yml' --tags 'install, create'"
+  "ansible-galaxy collection install -r '$ANSIBLE_DIR/requirements.yml' && ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/install_dependencies.yml'"
+  "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/setup_directories.yml'"
+  "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/create_service_accounts.yml'"
+  "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/configure_k8s_namespaces.yml'"
+  "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/generate_manifests.yml'"
+  "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/install_venafi_components.yml'"
+  "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/setup_cloud_integration.yml'"
+  "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/setup_sandbox.yml'"
+  "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/create_unmanaged_kid.yml'"
+  "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/create_expiry_eddie.yml'"
+  "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/create_cipher-snake.yml'"
+  "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/create_ghost-rider.yml'"
+  "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/create_phantom-ca.yml'"
+  "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/setup_mesh_apps.yml'"
 )
 
 # Execute the selected steps

@@ -1,6 +1,7 @@
 ---
 - name: Install Venafi Components Using venctl
   hosts: localhost
+  connection: local
   gather_facts: no
   environment:
     VENAFI_KUBERNETES_AGENT_CLIENT_ID: "{{ lookup('file', 'files/artifacts/venafi-install/venafi_agent_client_id.txt') }}"

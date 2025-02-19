@@ -1,6 +1,7 @@
 ---
 - name: Setup Required Directories
   hosts: localhost
+  connection: local
   gather_facts: no
   tasks:
     - name: Delete pre-existing directories

@@ -1,6 +1,7 @@
 ---
 - name: Setup Istio Service Mesh with Firefly
   hosts: localhost
+  connection: local
   gather_facts: no
   vars_files:
     - vars/vars.yml

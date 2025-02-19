@@ -1,6 +1,7 @@
 ---
 - name: Deploy resources to the Sandbox namespace
   hosts: localhost
+  connection: local
   gather_facts: no
   vars_files:
     - vars/vars.yml

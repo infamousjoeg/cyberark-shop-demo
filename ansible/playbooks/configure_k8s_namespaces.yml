@@ -1,6 +1,7 @@
 ---
 - name: Apply Kubernetes Namespaces
   hosts: localhost
+  connection: local
   gather_facts: no
   tasks:
     - name: Apply Venafi Namespace

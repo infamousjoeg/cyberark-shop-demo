@@ -1,5 +1,6 @@
 - name: Deploy Ghost Rider Certificate
   hosts: localhost
+  connection: local
   gather_facts: false
   tasks:
     - name: Template the Ghost Rider Certificate YAML

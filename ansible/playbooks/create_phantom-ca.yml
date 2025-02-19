@@ -1,5 +1,6 @@
 - name: Deploy Phantom CA and Certificate
   hosts: localhost
+  connection: local
   gather_facts: false
   tasks:
     - name: Apply Cert Policy and RBAC Self-Signed
