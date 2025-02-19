@@ -1,72 +1,98 @@
 #!/bin/bash
-set -eou pipefail
 
-echo "+ Check if Ansible is installed"
-if ! command -v ansible >/dev/null 2>&1; then
-    echo "❌ Error: Ansible is not installed!"
-    exit 1
-else
-    echo "✅ Ansible is installed: $(ansible --version | head -n 1)"
-fi
+# Define the path to the Ansible playbooks
+ANSIBLE_DIR="ansible"
+PLAYBOOK_DIR="$ANSIBLE_DIR/playbooks"
 
-# Ensure "ansible" directory exists before pushing into it
-if [ ! -d "ansible" ]; then
-    echo "❌ Error: 'ansible' directory not found!"
-    exit 1
-fi
+# Function to print section headers
+print_section() {
+  echo "============================================="
+  echo "$1"
+  echo "============================================="
+}
 
-pushd "ansible" > /dev/null
+# List of steps for the menu
+STEPS=(
+  "Install & Create kind Cluster"
+  "Install dependencies (venctl, jq, etc.)"
+  "Create necessary directories"
+  "Deploy service accounts"
+  "Setup Kubernetes namespaces"
+  "Generate Venafi manifests"
+  "Deploy Venafi components"
+  "Setup Venafi Cloud integration"
+  "Deploy sandbox resources"
+  "Create Unmanaged Kid in Nginx"
+  "Create Expiry Eddie - Long Duration Cert"
+  "Create Cipher-Snake - Bad Key Size"
+  "Create Ghost-Rider - Orphan Cert"
+  "Create Phantom-CA & Certificate"
+  "Setup Istio Service Mesh Apps"
+)
 
-    echo "+ Installing Kubernetes-in-Docker (kind) pre-requisites"
-    if ! ansible-playbook playbooks/kind.yml --tags "install"; then
-        echo "❌ Error: Failed to install Kubernetes-in-Docker pre-requisites"
-        exit 1
-    fi
+# Function to display the menu and get user input
+display_menu() {
+  clear
+  print_section "WELCOME TO THE CYBERARK SHOP DEPLOYMENT SETUP"
+  echo ""
+  echo "This script will execute the following steps:"
+  echo ""
 
-    echo "+ Creating kind cluster"
-    if ! ansible-playbook playbooks/kind.yml --tags "create"; then
-        echo "❌ Error: Failed to create kind cluster"
-        exit 1
-    fi
+  for i in "${!STEPS[@]}"; do
+    echo "$((i + 1)). ${STEPS[$i]}"
+  done
 
-    echo "+ Preloading Docker images into kind cluster"
-    if ! ansible-playbook playbooks/kind.yml --tags "load"; then
-        echo "❌ Error: Failed to preload Docker images"
-        exit 1
-    fi
+  echo ""
+  echo "Before continuing, please review and modify any necessary variables in:"
+  echo "  → $PLAYBOOK_DIR/vars/vars.yml"
+  echo ""
+  echo "Enter a number to start from a specific section, or press [ENTER] to start from the beginning:"
+  read -r START_FROM
 
-    echo "+ Verify/Change Configuration"
-    while true; do
-        read -rp "Verify/Change values in $PWD/playbooks/vars/vars.yml and press ENTER to continue..." input
-        if [ -z "$input" ]; then
-            break  # Exit loop and continue script
-        else
-            echo "Error: Just press Enter without typing anything"
-        fi
-    done
+  if [[ -z "$START_FROM" ]]; then
+    START_FROM=1
+  elif ! [[ "$START_FROM" =~ ^[0-9]+$ ]] || (( START_FROM < 1 || START_FROM > ${#STEPS[@]} )); then
+    echo "Invalid selection. Starting from the beginning."
+    START_FROM=1
+  fi
 
-    echo "+ Initialize Workspace"
-    if ! ansible-playbook playbooks/init.yml; then
-        echo "❌ Error: Failed to initialize workspace"
-        exit 1
-    fi
+  return $((START_FROM - 1))
+}
 
-    echo "+ Create Venafi Service Account for Discovery"
-    if ! ansible-playbook playbooks/create-sa-discovery.yml; then
-        echo "❌ Error: Failed to create Venafi Service Account for Discovery"
-        exit 1
-    fi
+# Display menu and get the starting index
+display_menu
+START_INDEX=$?
 
-    echo "+ Create Venafi Service Account for Private Registry"
-    if ! ansible-playbook playbooks/create-sa-registry.yml; then
-        echo "❌ Error: Failed to create Venafi Service Account for Private Registry"
-        exit 1
-    fi
+# Playbook commands corresponding to each step
+PLAYBOOKS=(
+  "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/kind.yml' --tags 'install, create'"
+  "ansible-galaxy collection install -r '$ANSIBLE_DIR/requirements.yml' && ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/install_dependencies.yml'"
+  "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/setup_directories.yml'"
+  "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/create_service_accounts.yml'"
+  "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/configure_k8s_namespaces.yml'"
+  "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/generate_manifests.yml'"
+  "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/install_venafi_components.yml'"
+  "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/setup_cloud_integration.yml'"
+  "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/setup_sandbox.yml'"
+  "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/create_unmanaged_kid.yml'"
+  "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/create_expiry_eddie.yml'"
+  "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/create_cipher-snake.yml'"
+  "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/create_ghost-rider.yml'"
+  "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/create_phantom-ca.yml'"
+  "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/setup_mesh_apps.yml'"
+)
 
-    echo "+ Create Venafi Service Account for Firefly"
-    if ! ansible-playbook playbooks/create-sa-firefly.yml; then
-        echo "❌ Error: Failed to create Venafi Service Account for Firefly"
-        exit 1
-    fi
+# Execute the selected steps
+for ((i = START_INDEX; i < ${#STEPS[@]}; i++)); do
+  print_section "${STEPS[$i]}"
+  eval "${PLAYBOOKS[$i]}" || exit 1
+done
 
-popd > /dev/null || echo "Warning: popd failed, but script completed successfully."
+print_section "CYBERARK SHOP SETUP COMPLETE"
+echo "All selected playbooks have been executed successfully!"
+echo "You can now verify the deployment by running:"
+echo ""
+echo "    kubectl get pods -A"
+echo ""
+echo "If any issues occur, check the logs or rerun individual playbooks as needed."
+echo "========================================"

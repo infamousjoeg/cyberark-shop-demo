@@ -1,0 +1,88 @@
+- name: Generate and deploy expiry-eddie certificate
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Generate RSA private key
+      community.crypto.openssl_privatekey:
+        path: files/artifacts/samples/expiry-eddie-key.key
+        size: 2048
+
+    - name: Generate a self-signed certificate
+      community.crypto.x509_certificate:
+        path: files/artifacts/samples/expiry-eddie-cert.crt
+        privatekey_path: files/artifacts/samples/expiry-eddie-key.key
+        provider: selfsigned
+        selfsigned_not_before: "+0s"
+        selfsigned_not_after: "+365d"
+        selfsigned_digest: "sha256"
+        selfsigned_create_subject_key_identifier: always_create
+        selfsigned_version: 3
+
+    - name: Create expiry-eddie TLS secret in Kubernetes
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: expiry-eddie.svc.cluster.local
+            namespace: sandbox
+          type: kubernetes.io/tls
+          data:
+            tls.crt: "{{ lookup('file', 'files/artifacts/samples/expiry-eddie-cert.crt') | b64encode }}"
+            tls.key: "{{ lookup('file', 'files/artifacts/samples/expiry-eddie-key.key') | b64encode }}"
+
+    - name: Deploy expiry-eddie Service
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: expiry-eddie-nginx
+            namespace: sandbox
+          spec:
+            type: NodePort
+            ports:
+              - port: 80
+            selector:
+              app: expiry-eddie-nginx
+
+    - name: Deploy expiry-eddie Nginx
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            labels:
+              app: expiry-eddie-nginx
+            name: expiry-eddie-nginx
+            namespace: sandbox
+          spec:
+            replicas: 2
+            selector:
+              matchLabels:
+                app: expiry-eddie-nginx
+            strategy:
+              type: Recreate
+            template:
+              metadata:
+                labels:
+                  app: expiry-eddie-nginx
+              spec:
+                containers:
+                  - image: nginx:latest
+                    name: expiry-eddie-nginx
+                    volumeMounts:
+                      - mountPath: "/etc/expiry-eddie-nginx/ssl"
+                        name: expiry-eddie-nginx-ssl
+                        readOnly: true
+                    ports:
+                      - containerPort: 80
+                volumes:
+                  - name: expiry-eddie-nginx-ssl
+                    secret:
+                      secretName: expiry-eddie.svc.cluster.local
+                restartPolicy: Always

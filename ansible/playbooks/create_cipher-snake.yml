@@ -1,0 +1,88 @@
+- name: Generate and deploy cipher-snake certificate
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Generate RSA private key
+      community.crypto.openssl_privatekey:
+        path: files/artifacts/samples/cipher-snake.svc.cluster.local.key
+        size: 1024
+
+    - name: Generate a self-signed certificate for cipher-snake
+      community.crypto.x509_certificate:
+        path: files/artifacts/samples/cipher-snake.svc.cluster.local.crt
+        privatekey_path: files/artifacts/samples/cipher-snake.svc.cluster.local.key
+        provider: selfsigned
+        selfsigned_not_before: "+0s"
+        selfsigned_not_after: "+91d"
+        selfsigned_digest: "sha256"
+        selfsigned_create_subject_key_identifier: always_create
+        selfsigned_version: 3
+
+    - name: Create cipher-snake TLS secret in Kubernetes
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: cipher-snake.svc.cluster.local
+            namespace: sandbox
+          type: kubernetes.io/tls
+          data:
+            tls.crt: "{{ lookup('file', 'files/artifacts/samples/cipher-snake.svc.cluster.local.crt') | b64encode }}"
+            tls.key: "{{ lookup('file', 'files/artifacts/samples/cipher-snake.svc.cluster.local.key') | b64encode }}"
+
+    - name: Deploy cipher-snake Service
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: cipher-snake-nginx
+            namespace: sandbox
+          spec:
+            type: NodePort
+            ports:
+              - port: 80
+            selector:
+              app: cipher-snake-nginx
+
+    - name: Deploy cipher-snake Nginx
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            labels:
+              app: cipher-snake-nginx
+            name: cipher-snake-nginx
+            namespace: sandbox
+          spec:
+            replicas: 2
+            selector:
+              matchLabels:
+                app: cipher-snake-nginx
+            strategy:
+              type: Recreate
+            template:
+              metadata:
+                labels:
+                  app: cipher-snake-nginx
+              spec:
+                containers:
+                  - image: nginx:latest
+                    name: cipher-snake-nginx
+                    volumeMounts:
+                      - mountPath: "/etc/cipher-snake-nginx/ssl"
+                        name: cipher-snake-nginx-ssl
+                        readOnly: true
+                    ports:
+                      - containerPort: 80
+                volumes:
+                  - name: cipher-snake-nginx-ssl
+                    secret:
+                      secretName: cipher-snake.svc.cluster.local
+                restartPolicy: Always

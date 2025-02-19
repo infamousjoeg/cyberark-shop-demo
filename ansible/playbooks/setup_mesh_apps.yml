@@ -1,0 +1,206 @@
+---
+- name: Setup Istio Service Mesh with Firefly
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  vars_files:
+    - vars/vars.yml
+  tasks:
+    - name: Ensure Helm is installed
+      community.general.homebrew:
+        name: helm
+        state: present
+
+    - name: Apply Istio System Namespace
+      kubernetes.core.k8s:
+        state: present
+        namespace: "istio-system"
+        src: "files/namespaces/istio-system.yaml"
+
+    - name: Apply Mesh Applications Namespace
+      kubernetes.core.k8s:
+        state: present
+        namespace: "mesh-apps"
+        src: "files/namespaces/mesh-apps.yaml"
+
+    - name: Create Venafi Trust Anchor Secret
+      kubernetes.core.k8s:
+        state: present
+        namespace: venafi
+        definition:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: venafi-trust-anchor
+            namespace: venafi
+          type: Opaque
+          data:
+            root-cert.pem: "{{ lookup('file', '{{ trust_anchor_root_ca_pem }}') | b64encode }}"
+
+    - name: Generate Istio CSR Configuration
+      ansible.builtin.copy:
+        src: "files/templates/helm/istio-csr-values.yaml.j2"
+        dest: "files/artifacts/venafi-install/istio-csr-values.yaml"
+        mode: '0644'
+
+    - name: Apply Firefly Mesh Issuer
+      kubernetes.core.k8s:
+        state: present
+        namespace: "istio-system"
+        src: "files/templates/servicemesh/firefly-mesh-wi-issuer.yaml"
+
+    - name: Create Istio CSR CA ConfigMap
+      kubernetes.core.k8s:
+        state: present
+        namespace: venafi
+        definition:
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: istio-csr-ca
+            namespace: venafi
+          data:
+            issuer-name: firefly-mesh-wi-issuer
+            issuer-kind: Issuer
+            issuer-group: firefly.venafi.com
+
+    - name: Create Firefly Trust Anchor
+      ansible.builtin.template:
+        src: "files/templates/servicemesh/firefly-trust-anchor.yaml.j2"
+        dest: "files/artifacts/venafi-install/firefly-trust-anchor.yaml"
+        mode: '0644'
+
+    - name: Apply Firefly Trust Anchor
+      kubernetes.core.k8s:
+        state: present
+        namespace: "istio-system"
+        src: "files/artifacts/venafi-install/firefly-trust-anchor.yaml"
+
+    - name: Generate Venafi Helm manifests for Istio CSR
+      ansible.builtin.command:
+        cmd: |
+          venctl components kubernetes manifest generate
+          --namespace venafi
+          --istio-csr
+          --istio-csr-version "{{ cert_manager_istio_csr_version }}"
+          --istio-csr-values-files istio-csr-values.yaml
+          --image-pull-secret-names venafi-image-pull-secret
+      register: venafi_manifest_output
+      changed_when: venafi_manifest_output.rc == 0
+
+    - name: Save Venafi Helm manifest output to file
+      ansible.builtin.copy:
+        content: "{{ venafi_manifest_output.stdout }}"
+        dest: "files/artifacts/venafi-install/venafi-manifests-istio.yaml"
+        mode: '0644'
+    
+    - name: Sync Venafi Istio manifests using venctl
+      ansible.builtin.command:
+        cmd: |
+          venctl components kubernetes manifest tool sync --file files/artifacts/venafi-install/venafi-manifests-istio.yaml
+      environment:
+        ISTIO_TRUST_DOMAIN: "cluster.local"
+      register: venctl_sync_output
+      changed_when: venctl_sync_output.rc == 0 
+
+    - name: Install Istio Configuration
+      ansible.builtin.template:
+        src: "files/templates/servicemesh/istio-config.yaml.j2"
+        dest: "files/artifacts/venafi-install/istio-config.yaml"
+        mode: '0644'
+
+    - name: Add Istio Helm Repository
+      kubernetes.core.helm_repository:
+        name: istio
+        repo_url: "https://istio-release.storage.googleapis.com/charts"
+
+    - name: Update Helm repositories
+      ansible.builtin.command:
+        cmd: helm repo update
+
+    - name: Install Istio Base (CRDs)
+      kubernetes.core.helm:
+        name: istio-base
+        chart_ref: istio/base
+        release_namespace: istio-system
+        create_namespace: yes
+        wait: yes
+
+    - name: Apply Istio Configuration with Helm
+      kubernetes.core.helm:
+        name: istiod
+        chart_ref: istio/istiod
+        release_namespace: istio-system
+        create_namespace: yes
+        wait: yes
+        values:
+          global:
+            caAddress: "cert-manager-istio-csr.venafi.svc:443"
+            trustDomain: "cluster.local"
+          components:
+            pilot:
+              k8s:
+                env:
+                  - name: ENABLE_CA_SERVER
+                    value: "false"
+
+    - name: Install Istio Ingress Gateway
+      kubernetes.core.helm:
+        name: istio-ingressgateway
+        chart_ref: istio/gateway
+        release_namespace: istio-system
+        create_namespace: yes
+        #wait: yes
+        values:
+          global:
+            caAddress: "cert-manager-istio-csr.venafi.svc:443"
+
+    - name: Install Istio Egress Gateway
+      kubernetes.core.helm:
+        name: istio-egressgateway
+        chart_ref: istio/gateway
+        release_namespace: istio-system
+        create_namespace: yes
+        #wait: yes
+        values:
+          global:
+            caAddress: "cert-manager-istio-csr.venafi.svc:443"
+
+    - name: Apply Peer Authentication for Istio
+      ansible.builtin.template:
+        src: "files/templates/servicemesh/peerauthentication.yaml.j2"
+        dest: "files/artifacts/venafi-install/peerauthentication.yaml"
+        mode: '0644'
+
+    - name: Apply Peer Authentication Policy
+      kubernetes.core.k8s:
+        state: present
+        namespace: "istio-system"
+        src: "files/artifacts/venafi-install/peerauthentication.yaml"
+
+    - name: Pull Docker images
+      community.docker.docker_image:
+        name: "{{ item }}"
+        source: pull
+      loop: "{{ mesh_docker_images }}"
+
+    - name: Load Docker images into kind cluster
+      command:
+        cmd: "kind load docker-image {{ item }} --name demo-poc-cluster-{{ resource_suffix }}"
+      loop: "{{ mesh_docker_images }}"
+
+
+    - name: Apply Kiali Add-on
+      kubernetes.core.k8s:
+        state: present
+        src: "https://raw.githubusercontent.com/istio/istio/refs/heads/release-1.24/samples/addons/{{ item }}.yaml"
+      loop:
+        - kiali
+        - prometheus
+        - grafana
+
+    - name: Apply Sample Mesh Applications
+      kubernetes.core.k8s:
+        state: present
+        namespace: "mesh-apps"
+        src: "https://raw.githubusercontent.com/sitaramkm/microservices-demo/refs/heads/main/release/kubernetes-manifests.yaml"

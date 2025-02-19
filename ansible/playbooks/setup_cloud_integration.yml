@@ -1,0 +1,43 @@
+---
+- name: Setup Venafi Cloud Integration
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  vars_files:
+    - vars/vars.yml
+  tasks:
+    - name: Create Venafi Cloud Access Secret
+      ansible.builtin.template:
+        src: "files/templates/cloud/venafi-cloud-secret.yaml.j2"
+        dest: "files/artifacts/config/venafi-cloud-secret.yaml"
+        mode: '0644'
+
+    - name: Apply Venafi Cloud Access Secret
+      kubernetes.core.k8s:
+        state: present
+        namespace: venafi
+        src: "files/artifacts/config/venafi-cloud-secret.yaml"
+
+    - name: Create Venafi Cloud Connection
+      ansible.builtin.copy:
+        src: "files/templates/cloud/venafi-cloud-connection.yaml.j2"
+        dest: "files/artifacts/config/venafi-cloud-connection.yaml"
+        mode: '0644'
+
+    - name: Apply Venafi Cloud Connection
+      kubernetes.core.k8s:
+        state: present
+        namespace: venafi
+        src: "files/artifacts/config/venafi-cloud-connection.yaml"
+
+    - name: Create Venafi Cloud Private CA Cluster Issuer
+      ansible.builtin.template:
+        src: "files/templates/cloud/venafi-cloud-privateca-cluster-issuer.yaml.j2"
+        dest: "files/artifacts/config/venafi-cloud-privateca-cluster-issuer.yaml"
+        mode: '0644'
+
+    - name: Apply Venafi Cloud Private CA Cluster Issuer
+      kubernetes.core.k8s:
+        state: present
+        namespace: venafi
+        src: "files/artifacts/config/venafi-cloud-privateca-cluster-issuer.yaml"

@@ -1,5 +1,42 @@
 ---
 
 resource_suffix: 1234567890
-ven_team_name: DevSecOps
-ven_cloud_api_key: xxxxxxxxxxxxxxxxxxxxx
+team_name: DevSecOps
+venaficloud_api_key: xxxxxxxxxxxxxxxxxxxxx
+zone_private_ca: 'Application\IssuingTemplate'
+
+# Required for service mesh (mesh-apps) use cases
+zone_public_ca: 'Application\IssuingTemplate'
+domain_for_mesh_apps: k8s.example.com
+aws_hosted_zone_id: Z01234567890HI0I6LA
+venaficloud_builtin_ica_root_ca_pem: files/venafi-root-ca.pem
+trust_anchor_root_ca_pem: "{{ venaficloud_builtin_ica_root_ca_pem }}"
+
+# Docker Hub mesh-apps images
+mesh_docker_images:
+  - "sitaramiyer222/adservice:v0.10.2.0124202501"
+  - "sitaramiyer222/cartservice:v0.10.2.0124202501"
+  - "sitaramiyer222/checkoutservice:v0.10.2.0124202501"
+  - "sitaramiyer222/currencyservice:v0.10.2.0124202501"
+  - "sitaramiyer222/emailservice:v0.10.2.0124202501"
+  - "sitaramiyer222/frontend:v0.10.2.0124202501"
+  - "sitaramiyer222/paymentservice:v0.10.2.0124202501"
+  - "sitaramiyer222/productcatalogservice:v0.10.2.0124202501"
+  - "sitaramiyer222/recommendationservice:v0.10.2.0124202501"
+  - "sitaramiyer222/shippingservice:v0.10.2.0124202501"
+  - "sitaramiyer222/redis:alpine"
+  - "prom/prometheus:v2.54.1"
+  - "grafana/grafana:11.2.2-security-01"
+
+# Venafi Private Registry image versions
+approver_policy_enterprise_version: "v0.20.0"
+cert_manager_version: "v1.16.3"
+cert_manager_approver_policy_version: "v0.18.0"
+cert_manager_istio_csr_version: "v0.14.0"
+csi_driver_version: "v0.10.2"
+csi_driver_spiffe_version: "v0.8.2"
+firefly_version: "v1.5.0"
+trust_manager_version: "v0.15.0"
+venafi_connection_version: "v0.3.1"
+venafi_enhanced_issuer_version: "v0.15.0"
+venafi_kubernetes_agent_version: "1.4.0"

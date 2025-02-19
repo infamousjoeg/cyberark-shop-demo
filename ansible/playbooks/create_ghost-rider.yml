@@ -1,0 +1,15 @@
+- name: Deploy Ghost Rider Certificate
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Template the Ghost Rider Certificate YAML
+      ansible.builtin.copy:
+        src: files/templates/certs/04-ghost-rider-cert.yaml
+        dest: files/artifacts/samples/04-ghost-rider-cert.yaml
+        mode: '644'
+
+    - name: Apply the Ghost Rider Certificate manifest
+      kubernetes.core.k8s:
+        state: present
+        src: files/artifacts/samples/04-ghost-rider-cert.yaml

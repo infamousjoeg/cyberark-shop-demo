@@ -1,0 +1,22 @@
+---
+- name: Install Required Dependencies
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  tasks:
+    - name: Ensure jq is installed
+      community.general.homebrew:
+        name: jq
+        state: present
+
+    - name: Download venctl installer
+      ansible.builtin.get_url:
+        url: "https://dl.venafi.cloud/venctl/latest/installer.sh"
+        dest: "/tmp/venctl_installer.sh"
+        mode: '0755'
+
+    - name: Run venctl installer
+      ansible.builtin.command:
+        cmd: "/bin/bash /tmp/venctl_installer.sh"
+      args:
+        creates: /usr/local/bin/venctl
