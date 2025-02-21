@@ -27,7 +27,9 @@ STEPS=(
   "Create Cipher-Snake - Bad Key Size"
   "Create Ghost-Rider - Orphan Cert"
   "Create Phantom-CA & Certificate"
-  "Setup Istio Service Mesh Apps"
+  "Setup Configuration for Service Mesh"
+  "Install Istio Service Mesh"
+  "Deploy CyberArk Shop Microservice App with Firefly"
 )
 
 # Function to display the menu and get user input
@@ -80,6 +82,8 @@ PLAYBOOKS=(
   "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/create_ghost-rider.yml'"
   "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/create_phantom-ca.yml'"
   "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/setup_mesh_apps.yml'"
+  "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/install_istio.yml'"
+  "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/deploy_mesh_apps.yml'"
 )
 
 # Execute the selected steps

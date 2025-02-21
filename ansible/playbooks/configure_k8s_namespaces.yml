@@ -4,11 +4,11 @@
   connection: local
   gather_facts: no
   tasks:
-    - name: Apply Venafi Namespace
+    - name: Apply CyberArk Namespace
       kubernetes.core.k8s:
         state: present
-        namespace: venafi
-        src: "files/namespaces/venafi.yaml"
+        namespace: cyberark
+        src: "files/namespaces/cyberark.yaml"
 
     - name: Apply Sandbox Namespace
       kubernetes.core.k8s:
@@ -19,17 +19,17 @@
     - name: Apply Discovery Secret to Kubernetes
       kubernetes.core.k8s:
         state: present
-        namespace: venafi
+        namespace: cyberark
         src: "files/artifacts/venafi-install/venafi_agent_secret.yaml"
 
     - name: Apply Registry Secret to Kubernetes
       kubernetes.core.k8s:
         state: present
-        namespace: venafi
+        namespace: cyberark
         src: "files/artifacts/venafi-install/venafi_registry_secret.yaml"
 
     - name: Apply Firefly Secret to Kubernetes
       kubernetes.core.k8s:
         state: present
-        namespace: venafi
+        namespace: cyberark
         src: "files/artifacts/venafi-install/venafi_firefly_secret.yaml"

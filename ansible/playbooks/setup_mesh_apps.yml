@@ -1,5 +1,5 @@
 ---
-- name: Setup Istio Service Mesh with Firefly
+- name: Setup Configuration for Service Mesh
   hosts: localhost
   connection: local
   gather_facts: no
@@ -26,13 +26,13 @@
     - name: Create Venafi Trust Anchor Secret
       kubernetes.core.k8s:
         state: present
-        namespace: venafi
+        namespace: cyberark
         definition:
           apiVersion: v1
           kind: Secret
           metadata:
             name: venafi-trust-anchor
-            namespace: venafi
+            namespace: cyberark
           type: Opaque
           data:
             root-cert.pem: "{{ lookup('file', '{{ trust_anchor_root_ca_pem }}') | b64encode }}"
@@ -52,13 +52,13 @@
     - name: Create Istio CSR CA ConfigMap
       kubernetes.core.k8s:
         state: present
-        namespace: venafi
+        namespace: cyberark
         definition:
           apiVersion: v1
           kind: ConfigMap
           metadata:
             name: istio-csr-ca
-            namespace: venafi
+            namespace: cyberark
           data:
             issuer-name: firefly-mesh-wi-issuer
             issuer-kind: Issuer
@@ -80,7 +80,7 @@
       ansible.builtin.command:
         cmd: |
           venctl components kubernetes manifest generate
-          --namespace venafi
+          --namespace cyberark
           --istio-csr
           --istio-csr-version "{{ cert_manager_istio_csr_version }}"
           --istio-csr-values-files istio-csr-values.yaml
@@ -108,99 +108,3 @@
         src: "files/templates/servicemesh/istio-config.yaml.j2"
         dest: "files/artifacts/venafi-install/istio-config.yaml"
         mode: '0644'
-
-    - name: Add Istio Helm Repository
-      kubernetes.core.helm_repository:
-        name: istio
-        repo_url: "https://istio-release.storage.googleapis.com/charts"
-
-    - name: Update Helm repositories
-      ansible.builtin.command:
-        cmd: helm repo update
-
-    - name: Install Istio Base (CRDs)
-      kubernetes.core.helm:
-        name: istio-base
-        chart_ref: istio/base
-        release_namespace: istio-system
-        create_namespace: yes
-        wait: yes
-
-    - name: Apply Istio Configuration with Helm
-      kubernetes.core.helm:
-        name: istiod
-        chart_ref: istio/istiod
-        release_namespace: istio-system
-        create_namespace: yes
-        wait: yes
-        values:
-          global:
-            caAddress: "cert-manager-istio-csr.venafi.svc:443"
-            trustDomain: "cluster.local"
-          components:
-            pilot:
-              k8s:
-                env:
-                  - name: ENABLE_CA_SERVER
-                    value: "false"
-
-    - name: Install Istio Ingress Gateway
-      kubernetes.core.helm:
-        name: istio-ingressgateway
-        chart_ref: istio/gateway
-        release_namespace: istio-system
-        create_namespace: yes
-        #wait: yes
-        values:
-          global:
-            caAddress: "cert-manager-istio-csr.venafi.svc:443"
-
-    - name: Install Istio Egress Gateway
-      kubernetes.core.helm:
-        name: istio-egressgateway
-        chart_ref: istio/gateway
-        release_namespace: istio-system
-        create_namespace: yes
-        #wait: yes
-        values:
-          global:
-            caAddress: "cert-manager-istio-csr.venafi.svc:443"
-
-    - name: Apply Peer Authentication for Istio
-      ansible.builtin.template:
-        src: "files/templates/servicemesh/peerauthentication.yaml.j2"
-        dest: "files/artifacts/venafi-install/peerauthentication.yaml"
-        mode: '0644'
-
-    - name: Apply Peer Authentication Policy
-      kubernetes.core.k8s:
-        state: present
-        namespace: "istio-system"
-        src: "files/artifacts/venafi-install/peerauthentication.yaml"
-
-    - name: Pull Docker images
-      community.docker.docker_image:
-        name: "{{ item }}"
-        source: pull
-      loop: "{{ mesh_docker_images }}"
-
-    - name: Load Docker images into kind cluster
-      command:
-        cmd: "kind load docker-image {{ item }} --name demo-poc-cluster-{{ resource_suffix }}"
-      loop: "{{ mesh_docker_images }}"
-
-
-    - name: Apply Kiali Add-on
-      kubernetes.core.k8s:
-        state: present
-        src: "https://raw.githubusercontent.com/istio/istio/refs/heads/release-1.24/samples/addons/{{ item }}.yaml"
-      loop:
-        - kiali
-        - prometheus
-        - grafana
-
-    - name: Apply Sample Mesh Applications
-      kubernetes.core.k8s:
-        state: present
-        namespace: "mesh-apps"
-        src: "https://raw.githubusercontent.com/sitaramkm/microservices-demo/refs/heads/main/release/kubernetes-manifests.yaml"

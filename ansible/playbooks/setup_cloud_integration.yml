@@ -15,7 +15,7 @@
     - name: Apply Venafi Cloud Access Secret
       kubernetes.core.k8s:
         state: present
-        namespace: venafi
+        namespace: cyberark
         src: "files/artifacts/config/venafi-cloud-secret.yaml"
 
     - name: Create Venafi Cloud Connection
@@ -27,7 +27,7 @@
     - name: Apply Venafi Cloud Connection
       kubernetes.core.k8s:
         state: present
-        namespace: venafi
+        namespace: cyberark
         src: "files/artifacts/config/venafi-cloud-connection.yaml"
 
     - name: Create Venafi Cloud Private CA Cluster Issuer
@@ -39,5 +39,5 @@
     - name: Apply Venafi Cloud Private CA Cluster Issuer
       kubernetes.core.k8s:
         state: present
-        namespace: venafi
+        namespace: cyberark
         src: "files/artifacts/config/venafi-cloud-privateca-cluster-issuer.yaml"

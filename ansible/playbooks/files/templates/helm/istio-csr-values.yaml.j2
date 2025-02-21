@@ -51,7 +51,7 @@ app:
       kind: Issuer
       # Issuer group name set on created CertificateRequests for both
       # istio-csr's serving certificate and incoming gRPC CSRs.
-      group: venafi.firefly.com
+      group: cyberark.firefly.com
   readinessProbe:
     # Container port to expose istio-csr HTTP readiness probe on default network interface.
     port: 6060
@@ -106,7 +106,7 @@ app:
     # presented to istio-agents. istio-agents must route to istio-csr using one
     # of these DNS names.
     certificateDNSNames:
-    - cert-manager-istio-csr.venafi.svc
+    - cert-manager-istio-csr.cyberark.svc
     # Requested duration of gRPC serving certificate. Will be automatically
     # renewed.
     # Based on NIST 800-204A recommendations (SM-DR13).

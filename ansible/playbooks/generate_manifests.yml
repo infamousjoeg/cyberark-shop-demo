@@ -24,7 +24,7 @@
       ansible.builtin.command:
         cmd: |
           venctl components kubernetes manifest generate
-          --namespace venafi
+          --namespace cyberark
           --approver-policy-enterprise
           --approver-policy-enterprise-version {{ approver_policy_enterprise_version }}
           --cert-manager

@@ -12,6 +12,12 @@ aws_hosted_zone_id: Z01234567890HI0I6LA
 venaficloud_builtin_ica_root_ca_pem: files/venafi-root-ca.pem
 trust_anchor_root_ca_pem: "{{ venaficloud_builtin_ica_root_ca_pem }}"
 
+# Docker Hub istio images
+istio_docker_images:
+  - "docker.io/istio/base:latest"
+  - "docker.io/istio/pilot:1.24.3"
+  - "docker.io/istio/proxyv2:1.24.3"
+
 # Docker Hub mesh-apps images
 mesh_docker_images:
   - "sitaramiyer222/adservice:v0.10.2.0124202501"

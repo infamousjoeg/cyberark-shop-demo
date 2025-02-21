@@ -1,0 +1,43 @@
+- name: Uninstall Istio Service Mesh
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  vars_files:
+    - vars/vars.yml
+  tasks:
+    - name: Remove Istio Egress Gateway release
+      kubernetes.core.helm:
+        name: istio-egressgateway
+        release_namespace: istio-system
+        state: absent
+
+    - name: Remove Istio Ingress Gateway release
+      kubernetes.core.helm:
+        name: istio-ingressgateway
+        release_namespace: istio-system
+        state: absent
+
+    - name: Remove Istiod (Istio control plane) release
+      kubernetes.core.helm:
+        name: istiod
+        release_namespace: istio-system
+        state: absent
+
+    - name: Remove Istio Base (CRDs) release
+      kubernetes.core.helm:
+        name: istio-base
+        release_namespace: istio-system
+        state: absent
+
+    - name: Remove Peer Authentication Policy
+      kubernetes.core.k8s:
+        state: absent
+        namespace: istio-system
+        # The following uses the original YAML definition applied for the Peer Authentication.
+        # Ensure that the file 'files/artifacts/venafi-install/peerauthentication.yaml' contains the same metadata (including name) used during creation.
+        definition: "{{ lookup('file', 'files/artifacts/venafi-install/peerauthentication.yaml') }}"
+
+    - name: Remove Istio Helm repository (optional)
+      kubernetes.core.helm_repository:
+        name: istio
+        state: absent
