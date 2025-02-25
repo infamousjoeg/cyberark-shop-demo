@@ -6,11 +6,11 @@
   vars_files:
     - vars/vars.yml
   tasks:
-    - name: Delete venafi Namespace
+    - name: Delete cyberark Namespace
       kubernetes.core.k8s:
         state: absent
-        namespace: venafi
-        src: "files/namespaces/venafi.yaml"
+        namespace: cyberark
+        src: "files/namespaces/cyberark.yaml"
       ignore_errors: yes
 
     - name: Delete sandbox Namespace

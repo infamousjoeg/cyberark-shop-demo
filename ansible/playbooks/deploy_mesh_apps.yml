@@ -1,0 +1,33 @@
+- name: Deploy CyberArk Shop Microservice App with Firefly
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  vars_files:
+    - vars/vars.yml
+  tasks:
+    - name: Pull Docker images
+      community.docker.docker_image:
+        name: "{{ item }}"
+        source: pull
+      loop: "{{ mesh_docker_images }}"
+
+    - name: Load Docker images into kind cluster
+      command:
+        cmd: "kind load docker-image {{ item }} --name demo-poc-cluster-{{ resource_suffix }}"
+      loop: "{{ mesh_docker_images }}"
+
+
+    - name: Apply Kiali Add-on
+      kubernetes.core.k8s:
+        state: present
+        src: "https://raw.githubusercontent.com/istio/istio/refs/heads/release-1.24/samples/addons/{{ item }}.yaml"
+      loop:
+        - kiali
+        - prometheus
+        - grafana
+
+    - name: Apply Sample Mesh Applications
+      kubernetes.core.k8s:
+        state: present
+        namespace: "mesh-apps"
+        src: "https://raw.githubusercontent.com/sitaramkm/microservices-demo/refs/heads/main/release/kubernetes-manifests.yaml"

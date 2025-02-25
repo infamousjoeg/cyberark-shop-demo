@@ -1,0 +1,102 @@
+- name: Install Istio Service Mesh
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  vars_files:
+    - vars/vars.yml
+  tasks:
+    - name: Create Docker Hub image pull secret from local config.json
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: dockerhub-creds
+            namespace: istio-system
+          type: kubernetes.io/dockerconfigjson
+          data:
+            .dockerconfigjson: "{{ lookup('file', '~/.docker/config.json') | b64encode }}"
+
+    - name: Add Istio Helm Repository
+      kubernetes.core.helm_repository:
+        name: istio
+        repo_url: "https://istio-release.storage.googleapis.com/charts"
+
+    - name: Update Helm repositories
+      ansible.builtin.command:
+        cmd: helm repo update
+
+    - name: Install Istio Base (CRDs)
+      kubernetes.core.helm:
+        name: istio-base
+        chart_ref: istio/base
+        release_namespace: istio-system
+        create_namespace: yes
+        wait: yes
+        values:
+          global:
+            imagePullSecrets:
+              - dockerhub-creds
+
+    - name: Apply Istio Configuration with Helm
+      kubernetes.core.helm:
+        name: istiod
+        chart_ref: istio/istiod
+        release_namespace: istio-system
+        create_namespace: yes
+        values:
+          global:
+            caAddress: "cert-manager-istio-csr.cyberark.svc:443"
+            trustDomain: "cluster.local"
+            imagePullPolicy: IfNotPresent
+            imagePullSecrets:
+              - dockerhub-creds
+          components:
+            pilot:
+              k8s:
+                env:
+                  - name: ENABLE_CA_SERVER
+                    value: "false"
+
+
+    - name: Install Istio Ingress Gateway
+      kubernetes.core.helm:
+        name: istio-ingressgateway
+        chart_ref: istio/gateway
+        release_namespace: istio-system
+        create_namespace: yes
+        #wait: yes
+        values:
+          global:
+            caAddress: "cert-manager-istio-csr.cyberark.svc:443"
+          imagePullPolicy: IfNotPresent
+          imagePullSecrets:
+            - name: dockerhub-creds
+
+
+    - name: Install Istio Egress Gateway
+      kubernetes.core.helm:
+        name: istio-egressgateway
+        chart_ref: istio/gateway
+        release_namespace: istio-system
+        create_namespace: yes
+        #wait: yes
+        values:
+          global:
+            caAddress: "cert-manager-istio-csr.cyberark.svc:443"
+          imagePullPolicy: IfNotPresent
+          imagePullSecrets:
+            - name: dockerhub-creds
+
+    - name: Apply Peer Authentication for Istio
+      ansible.builtin.template:
+        src: "files/templates/servicemesh/peerauthentication.yaml.j2"
+        dest: "files/artifacts/venafi-install/peerauthentication.yaml"
+        mode: '0644'
+
+    - name: Apply Peer Authentication Policy
+      kubernetes.core.k8s:
+        state: present
+        namespace: "istio-system"
+        src: "files/artifacts/venafi-install/peerauthentication.yaml"

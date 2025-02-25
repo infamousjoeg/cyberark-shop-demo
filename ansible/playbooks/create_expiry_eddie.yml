@@ -3,6 +3,18 @@
   connection: local
   gather_facts: false
   tasks:
+    - name: Create Long Duration Certificate Request
+      ansible.builtin.copy:
+        src: "files/templates/certs/02-expiry-eddie-cert.yaml"
+        dest: "files/artifacts/samples/02-expiry-eddie-cert.yaml"
+        mode: '0644'
+    
+    - name: Apply Long Duration Certificate Request
+      kubernetes.core.k8s:
+        state: present
+        namespace: sandbox
+        src: "files/artifacts/samples/02-expiry-eddie-cert.yaml"
+
     - name: Generate RSA private key
       community.crypto.openssl_privatekey:
         path: files/artifacts/samples/expiry-eddie-key.key
@@ -16,7 +28,7 @@
         selfsigned_not_before: "+0s"
         selfsigned_not_after: "+365d"
         selfsigned_digest: "sha256"
-        selfsigned_create_subject_key_identifier: always_create
+        selfsigned_create_subject_key_identifier: create_if_not_provided
         selfsigned_version: 3
 
     - name: Create expiry-eddie TLS secret in Kubernetes

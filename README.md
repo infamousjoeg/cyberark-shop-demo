@@ -18,6 +18,8 @@ A microservice digital store demonstration integrated with CyberArk's Identity S
   - Cryptography Ansible Module
     - `python3 -m pip install cryptography`
 - [Venafi Control Plane](https://venafi.com/try-venafi/tls-protect-for-kubernetes/)
+- Your local Docker Config credentials will be used to pull Istio images.
+  - Ensure you're authenticated to avoid rate limiting issues.
 
 ## Usage
 
@@ -46,7 +48,9 @@ This script will execute the following steps:
 12. Create Cipher-Snake - Bad Key Size
 13. Create Ghost-Rider - Orphan Cert
 14. Create Phantom-CA & Certificate
-15. Setup Istio Service Mesh Apps
+15. Setup Configuration for Service Mesh
+16. Install Istio Service Mesh
+17. Deploy CyberArk Shop Microservice App with Firefly
 
 Before continuing, please review and modify any necessary variables in:
   → ansible/playbooks/vars/vars.yml
