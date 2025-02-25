@@ -1,6 +1,9 @@
 #!/bin/bash
+# =============================================
+# CyberArk Shop Deployment Setup Script
+# =============================================
 
-# Define the path to the Ansible playbooks
+# Define paths for Ansible playbooks
 ANSIBLE_DIR="ansible"
 PLAYBOOK_DIR="$ANSIBLE_DIR/playbooks"
 
@@ -11,7 +14,7 @@ print_section() {
   echo "============================================="
 }
 
-# List of steps for the menu
+# Define steps and their corresponding playbook commands
 STEPS=(
   "Install & Create kind Cluster"
   "Install dependencies (venctl, jq, etc.)"
@@ -32,40 +35,6 @@ STEPS=(
   "Deploy CyberArk Shop Microservice App with Firefly"
 )
 
-# Function to display the menu and get user input
-display_menu() {
-  clear
-  print_section "WELCOME TO THE CYBERARK SHOP DEPLOYMENT SETUP"
-  echo ""
-  echo "This script will execute the following steps:"
-  echo ""
-
-  for i in "${!STEPS[@]}"; do
-    echo "$((i + 1)). ${STEPS[$i]}"
-  done
-
-  echo ""
-  echo "Before continuing, please review and modify any necessary variables in:"
-  echo "  → $PLAYBOOK_DIR/vars/vars.yml"
-  echo ""
-  echo "Enter a number to start from a specific section, or press [ENTER] to start from the beginning:"
-  read -r START_FROM
-
-  if [[ -z "$START_FROM" ]]; then
-    START_FROM=1
-  elif ! [[ "$START_FROM" =~ ^[0-9]+$ ]] || (( START_FROM < 1 || START_FROM > ${#STEPS[@]} )); then
-    echo "Invalid selection. Starting from the beginning."
-    START_FROM=1
-  fi
-
-  return $((START_FROM - 1))
-}
-
-# Display menu and get the starting index
-display_menu
-START_INDEX=$?
-
-# Playbook commands corresponding to each step
 PLAYBOOKS=(
   "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/kind.yml' --tags 'install, create'"
   "ansible-galaxy collection install -r '$ANSIBLE_DIR/requirements.yml' && ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/install_dependencies.yml'"
@@ -86,17 +55,101 @@ PLAYBOOKS=(
   "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/deploy_mesh_apps.yml'"
 )
 
-# Execute the selected steps
-for ((i = START_INDEX; i < ${#STEPS[@]}; i++)); do
-  print_section "${STEPS[$i]}"
-  eval "${PLAYBOOKS[$i]}" || exit 1
+TOTAL_STEPS=${#STEPS[@]}
+
+# =============================================
+# Display Menu Options
+# =============================================
+clear
+print_section "CYBERARK SHOP DEPLOYMENT SETUP"
+
+# Grouped (Lettered) Options
+echo "Grouped Options:"
+echo "  A) Deploy KinD Cluster Only               -> Step 1"
+echo "  B) Deploy (A) & Venafi Components          -> Steps 1-8"
+echo "  C) Deploy (A), (B) & TLS Protect for K8s    -> Steps 1-14"
+echo "  D) Deploy (A), (B), (C) & Workload Identity  -> Steps 1-17 (Default)"
+echo ""
+
+# Detailed Numbered Menu with Group Annotations
+echo "Detailed Steps:"
+for (( i=0; i<TOTAL_STEPS; i++ )); do
+  # Group assignment based on step index (0-based)
+  if [ $i -eq 0 ]; then
+    group="A"
+  elif [ $i -lt 8 ]; then
+    group="B"
+  elif [ $i -lt 14 ]; then
+    group="C"
+  else
+    group="D"
+  fi
+  printf "  %2d. [Group %s] %s\n" $((i+1)) "$group" "${STEPS[$i]}"
 done
 
-print_section "CYBERARK SHOP SETUP COMPLETE"
-echo "All selected playbooks have been executed successfully!"
-echo "You can now verify the deployment by running:"
 echo ""
-echo "    kubectl get pods -A"
+echo "Enter a number (1-$TOTAL_STEPS) to start from that step,"
+echo "or a letter (A, B, C, D) for a preset grouping."
+echo "Press ENTER with no input to run the full deployment."
+echo -n "Your selection: "
+read -r CHOICE
+
+# =============================================
+# Process User Input to Determine Execution Range
+# =============================================
+# Default to full deployment
+START_INDEX=0
+END_INDEX=$((TOTAL_STEPS - 1))
+
+if [[ -z "$CHOICE" ]]; then
+  echo "No input provided. Running full deployment (steps 1-$TOTAL_STEPS)."
+elif [[ "$CHOICE" =~ ^[0-9]+$ ]]; then
+  if (( CHOICE >= 1 && CHOICE <= TOTAL_STEPS )); then
+    START_INDEX=$((CHOICE - 1))
+    echo "Starting deployment from step $CHOICE through step $TOTAL_STEPS."
+  else
+    echo "Invalid number. Running full deployment."
+  fi
+elif [[ "$CHOICE" =~ ^[A-Za-z]$ ]]; then
+  LETTER=$(echo "$CHOICE" | tr '[:lower:]' '[:upper:]')
+  case "$LETTER" in
+    A)
+      END_INDEX=0
+      echo "Running Group A: Only step 1 (KinD Cluster)."
+      ;;
+    B)
+      END_INDEX=7
+      echo "Running Group B: Steps 1 through 8 (KinD + Venafi Components)."
+      ;;
+    C)
+      END_INDEX=13
+      echo "Running Group C: Steps 1 through 14 (including TLS Protect for K8s)."
+      ;;
+    D)
+      END_INDEX=$((TOTAL_STEPS - 1))
+      echo "Running Group D: Full deployment (steps 1-$TOTAL_STEPS)."
+      ;;
+    *)
+      echo "Invalid letter selection. Running full deployment."
+      ;;
+  esac
+else
+  echo "Invalid input. Running full deployment."
+fi
+
 echo ""
-echo "If any issues occur, check the logs or rerun individual playbooks as needed."
-echo "========================================"
+echo "Beginning execution..."
+echo ""
+
+# =============================================
+# Execute Selected Playbooks
+# =============================================
+for (( i = START_INDEX; i <= END_INDEX; i++ )); do
+  print_section "${STEPS[$i]}"
+  eval "${PLAYBOOKS[$i]}" || { echo "Error encountered during '${STEPS[$i]}'. Exiting."; exit 1; }
+done
+
+print_section "DEPLOYMENT COMPLETE"
+echo "Deployment completed successfully!"
+echo "Verify the deployment with: kubectl get pods -A"
+echo "============================================="

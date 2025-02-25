@@ -12,4 +12,5 @@
     - name: Apply the Ghost Rider Certificate manifest
       kubernetes.core.k8s:
         state: present
+        namespace: sandbox
         src: files/artifacts/samples/04-ghost-rider-cert.yaml
