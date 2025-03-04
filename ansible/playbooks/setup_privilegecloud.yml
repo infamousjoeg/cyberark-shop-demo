@@ -1,0 +1,113 @@
+- name: Setup PrivilegeCloud Environment
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  vars_files:
+    - vars/vars.yml
+  tasks:
+    - name: "Discover Platform Endpoints for {{ cyberark_subdomain }}.cyberark.cloud"
+      ansible.builtin.uri:
+        url: "https://platform-discovery.cyberark.cloud/api/v2/services/subdomain/{{ cyberark_subdomain }}"
+        method: GET
+      register: cyberark_endpoints
+
+    - name: Login to Privilege Cloud
+      ansible.builtin.uri:
+        url: "{{ cyberark_endpoints.json.identity_administration.api }}/oauth2/platformtoken"
+        method: POST
+        follow_redirects: all
+        body_format: form-urlencoded
+        body:
+          grant_type: client_credentials
+          client_id: "{{ cyberark_service_user }}"
+          client_secret: "{{ cyberark_service_secret }}"
+      register: cyberark_login
+      no_log: yes
+
+    - name: Create cyberark-shop-demo safe
+      ansible.builtin.uri:
+        url: "{{ cyberark_endpoints.json.pcloud.api }}/passwordvault/api/safes"
+        method: POST
+        follow_redirects: all
+        headers:
+          Authorization: "Bearer {{ cyberark_login.json.access_token }}"
+        body_format: json
+        body:
+          safename: cyberark-shop-demo
+          description: Automatically provisioned via Ansible. Safe supporting cyberark-shop-demo demonstration.
+          numberofdaysretention: 0
+        status_code:
+          - 201
+          - 409
+      register: cyberark_safe
+
+    - name: Add safe members to cyberark-shop-demo safe
+      ansible.builtin.uri:
+        url: "{{ cyberark_endpoints.json.pcloud.api }}/passwordvault/api/safes/{{ cyberark_safe.json.safeUrlId }}/members"
+        method: POST
+        follow_redirects: all
+        headers:
+          Authorization: "Bearer {{ cyberark_login.json.access_token }}"
+        body_format: json
+        body: "{{ item }}"
+        status_code:
+          - 201
+          - 409
+      loop:
+        - membername: "{{ cyberark_safe_owner }}"
+          searchin: "{{ cyberark_safe_owner_directory }}"
+          membertype: "{{ cyberark_safe_owner_type }}"
+          permissions:
+            useaccounts: yes
+            retrieveaccounts: yes
+            listaccounts: yes
+            addaccounts: yes
+            updateaccountcontent: yes
+            updateaccountproperties: yes
+            initiatecpmaccountmanagementoperations: yes
+            specifynextaccountcontent: yes
+            renameaccounts: yes
+            deleteaccounts: yes
+            unlockaccounts: yes
+            managesafe: yes
+            managesafemembers: yes
+            backupsafe: yes
+            viewauditlog: yes
+            viewsafemembers: yes
+            createfolders: yes
+            deletefolders: yes
+            moveaccountsandfolders: yes
+        - membername: "Conjur Sync"
+          searchin: "System Component Users"
+          membertype: "User"
+          permissions:
+            useaccounts: yes
+            retrieveaccounts: yes
+            listaccounts: yes
+            accesswithoutconfirmation: yes
+      register: cyberark_safe_members
+
+    - name: Onboard PostgreSQL account in Privilege Cloud
+      ansible.builtin.uri:
+        url: "{{ cyberark_endpoints.json.pcloud.api }}/passwordvault/api/accounts"
+        method: POST
+        follow_redirects: all
+        headers:
+          Authorization: "Bearer {{ cyberark_login.json.access_token }}"
+        body_format: json
+        body:
+          name: "Database-{{ cyberark_pgsql_platform_id }}-{{ cyberark_pgsql_address }}-{{ cyberark_pgsql_username }}"
+          address: "{{ cyberark_pgsql_address }}"
+          username: "{{ cyberark_pgsql_username }}"
+          platformid: "{{ cyberark_pgsql_platform_id }}"
+          safename: "{{ cyberark_safe.json.safeUrlId }}"
+          secret: "{{ lookup('ansible.builtin.password', '/dev/null', chars=['ascii_letters', 'digits']) }}"
+          secrettype: password
+          secretsmanagement:
+            automaticmanagementenabled: no
+            manualmanagementreason: cyberark-shop-demo use only
+          platformaccountproperties:
+            database: productcatalog
+            port: 5432
+        status_code: 201
+      register: cyberark_account
