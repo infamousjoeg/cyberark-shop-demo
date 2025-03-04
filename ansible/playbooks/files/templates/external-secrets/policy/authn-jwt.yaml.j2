@@ -1,12 +1,13 @@
 - !policy
-  id: eso-jwt-mesh-apps
+  id: {{ conjur_authn_service_id }}
   body:
     - !webservice
 
     - !variable token-app-property
     - !variable identity-path
     - !variable issuer
-    - !variable public-keys
+    - !variable jwks-uri
+    - !variable ca-cert
 
     - !group apps
 

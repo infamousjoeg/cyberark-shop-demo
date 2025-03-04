@@ -1,0 +1,24 @@
+---
+- name: Configure Conjur JWT Authenticator
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  vars_files:
+    - vars/vars.yml
+  tasks:
+    - name: Create JWT Delete Policy
+      ansible.builtin.template:
+        src: "files/templates/external-secrets/policy/delete.yaml.j2"
+        dest: "files/artifacts/conjur/delete-jwt-policy.yaml"
+        mode: '0644'
+
+    - name: Update JWT Authenticator Policy
+      ansible.builtin.command:
+        cmd: "conjur policy update -b conjur/authn-jwt -f files/artifacts/conjur/delete-jwt-policy.yaml"
+      register: jwt_policy_result
+      changed_when: "'Loaded policy' in jwt_policy_result.stdout"
+
+    - name: Delete artifacts Directory
+      ansible.builtin.file:
+        state: absent
+        name: "files/artifacts/conjur"

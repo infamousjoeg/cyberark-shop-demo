@@ -2,8 +2,13 @@
 
 resource_suffix: 1234567890
 team_name: DevSecOps
-venaficloud_api_key: xxxxxxxxxxxxxxxxxxxxx
+venaficloud_api_key: # https://cyberark.github.io/summon & https://github.com/infamousjoeg/conceal
 zone_private_ca: 'Application\IssuingTemplate'
+
+conjur_cloud_url: https://subdomain.secretsmgr.cyberark.cloud
+identity_service_user: ServiceUser@cyberark.cloud.0000
+identity_service_secret: # https://cyberark.github.io/summon & https://github.com/infamousjoeg/conceal
+conjur_authn_service_id: eso-mesh-apps 
 
 # Required for service mesh (mesh-apps) use cases
 zone_public_ca: 'Application\IssuingTemplate'
