@@ -1,0 +1,10 @@
+- !host
+  id: cyberark-shop-demo/cd/kubernetes/system:serviceaccount:mesh-apps:productcatalogservice
+  annotations:
+    authn-jwt/{{ conjur_authn_service_id }}/namespace: mesh-apps
+    authn-jwt/{{ conjur_authn_service_id }}/serviceaccount/name: productcatalogservice
+    type: Kubernetes/Openshift
+
+- !grant
+  role: !group vault/{{ cyberark_safe_name }}/delegation/consumers
+  member: !host cyberark-shop-demo/cd/kubernetes/system:serviceaccount:mesh-apps:productcatalogservice

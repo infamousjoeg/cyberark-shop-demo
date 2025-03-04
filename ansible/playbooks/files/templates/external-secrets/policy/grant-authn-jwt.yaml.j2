@@ -1,0 +1,6 @@
+- !policy
+  id: {{ conjur_authn_service_id }}
+  body:
+    - !grant
+      role: !group apps
+      member: !host /data/cyberark-shop-demo/cd/kubernetes/system:serviceaccount:mesh-apps:productcatalogservice

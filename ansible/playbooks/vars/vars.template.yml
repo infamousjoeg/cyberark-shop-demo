@@ -9,6 +9,7 @@ cyberark_subdomain: subdomain # https://subdomain.cyberark.cloud
 cyberark_service_user: ServiceUser@cyberark.cloud.0000
 cyberark_service_secret: # https://cyberark.github.io/summon & https://github.com/infamousjoeg/conceal
 
+cyberark_safe_name: cyberark-shop-demo
 cyberark_safe_owner: Privilege Cloud Admins
 cyberark_safe_owner_directory: CyberArk Cloud Directory
 cyberark_safe_owner_type: Role
@@ -17,7 +18,8 @@ cyberark_pgsql_platform_id: PostgreSQL
 cyberark_pgsql_address: postgres.example.com
 cyberark_pgsql_username: postgres
 
-conjur_authn_service_id: eso-mesh-apps 
+conjur_authn_service_id: eso-mesh-apps
+conjur_edge_url: edge.example.com # can also be https://subdomain.secretsmgr.cyberark.cloud if not using Edge
 
 # Required for service mesh (mesh-apps) use cases
 zone_public_ca: 'Application\IssuingTemplate'

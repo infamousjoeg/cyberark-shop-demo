@@ -1,0 +1,16 @@
+- !delete
+  record: !host cyberark-shop-demo/cd/kubernetes/system:serviceaccount:mesh-apps:productcatalogservice
+- !delete
+  record: !group vault/{{ cyberark_safe_name }}/delegation/consumers
+- !delete
+  record: !group vault/{{ cyberark_safe_name }}-admins
+- !delete
+  record: !variable vault/{{ cyberark_safe_name }}/Database-{{ cyberark_pgsql_platform_id }}-{{ cyberark_pgsql_address }}-{{ cyberark_pgsql_username }}/address
+- !delete
+  record: !variable vault/{{ cyberark_safe_name }}/Database-{{ cyberark_pgsql_platform_id }}-{{ cyberark_pgsql_address }}-{{ cyberark_pgsql_username }}/Database
+- !delete
+  record: !variable vault/{{ cyberark_safe_name }}/Database-{{ cyberark_pgsql_platform_id }}-{{ cyberark_pgsql_address }}-{{ cyberark_pgsql_username }}/password
+- !delete
+  record: !variable vault/{{ cyberark_safe_name }}/Database-{{ cyberark_pgsql_platform_id }}-{{ cyberark_pgsql_address }}-{{ cyberark_pgsql_username }}/Port
+- !delete
+  record: !variable vault/{{ cyberark_safe_name }}/Database-{{ cyberark_pgsql_platform_id }}-{{ cyberark_pgsql_address }}-{{ cyberark_pgsql_username }}/username

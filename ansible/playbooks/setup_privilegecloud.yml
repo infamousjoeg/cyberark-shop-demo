@@ -24,7 +24,7 @@
       register: cyberark_login
       no_log: yes
 
-    - name: Create cyberark-shop-demo safe
+    - name: "Create {{ cyberark_safe_name }} safe"
       ansible.builtin.uri:
         url: "{{ cyberark_endpoints.json.pcloud.api }}/passwordvault/api/safes"
         method: POST
@@ -33,7 +33,7 @@
           Authorization: "Bearer {{ cyberark_login.json.access_token }}"
         body_format: json
         body:
-          safename: cyberark-shop-demo
+          safename: "{{ cyberark_safe_name }}"
           description: Automatically provisioned via Ansible. Safe supporting cyberark-shop-demo demonstration.
           numberofdaysretention: 0
         status_code:

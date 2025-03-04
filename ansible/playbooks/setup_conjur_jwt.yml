@@ -38,7 +38,7 @@
 
     - name: Login to Conjur Cloud 
       ansible.builtin.command:
-        cmd: "conjur login -i {{ identity_service_user }} -p {{ identity_service_secret }}"
+        cmd: "conjur login -i {{ cyberark_service_user }} -p {{ cyberark_service_secret }}"
       register: conjur_login
       changed_when: "'Successfully logged in to Conjur Cloud' in conjur_login.stdout"
       #no_log: true
@@ -69,7 +69,7 @@
 
     - name: Set JWT Authenticator Identity Path
       ansible.builtin.command:
-        cmd: "conjur variable set -i conjur/authn-jwt/{{ conjur_authn_service_id }}/identity-path -v 'data/cd/kubernetes'"
+        cmd: "conjur variable set -i conjur/authn-jwt/{{ conjur_authn_service_id }}/identity-path -v 'data/cyberark-shop-demo/cd/kubernetes'"
       register: var_result
       changed_when: "'Value added' in var_result.stdout"
 

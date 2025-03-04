@@ -8,7 +8,7 @@
   tasks:
     - name: Create JWT Delete Policy
       ansible.builtin.template:
-        src: "files/templates/external-secrets/policy/delete.yaml.j2"
+        src: "files/templates/external-secrets/policy/delete-authn-jwt.yaml.j2"
         dest: "files/artifacts/conjur/delete-jwt-policy.yaml"
         mode: '0644'
 
