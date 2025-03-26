@@ -1,11 +1,86 @@
 #!/bin/bash
 # =============================================
 # CyberArk Shop Deployment Setup Script
+# Supports both Ubuntu Linux and MacOS environments
 # =============================================
 
 # Define paths for Ansible playbooks
 ANSIBLE_DIR="ansible"
 PLAYBOOK_DIR="$ANSIBLE_DIR/playbooks"
+
+# Detect operating system and store in OS_TYPE variable
+detect_os() {
+  # Check for Linux vs Darwin (MacOS)
+  OS_TYPE=$(uname -s)
+  if [ "$OS_TYPE" = "Linux" ]; then
+    # On Linux, check specifically for Ubuntu
+    if [ -f /etc/lsb-release ] && grep -q "Ubuntu" /etc/lsb-release; then
+      OS_TYPE="Ubuntu"
+      echo "Ubuntu Linux detected"
+    else
+      echo "Warning: This script is optimized for Ubuntu Linux. Other Linux distributions may work but are not fully tested."
+      OS_TYPE="Linux"
+    fi
+  elif [ "$OS_TYPE" = "Darwin" ]; then
+    echo "MacOS detected"
+  else
+    echo "Warning: Unsupported operating system. This script is optimized for Ubuntu Linux and MacOS."
+  fi
+}
+
+# Function to check and install prerequisites based on OS
+check_prerequisites() {
+  echo "Checking prerequisites..."
+  
+  # Check for Ansible
+  if ! command -v ansible >/dev/null 2>&1; then
+    echo "Ansible is not installed. Installing..."
+    if [ "$OS_TYPE" = "Ubuntu" ] || [ "$OS_TYPE" = "Linux" ]; then
+      # Ubuntu-specific Ansible installation
+      sudo apt update
+      sudo apt install -y software-properties-common
+      sudo add-apt-repository --yes --update ppa:ansible/ansible
+      sudo apt install -y ansible
+    elif [ "$OS_TYPE" = "Darwin" ]; then
+      # MacOS-specific Ansible installation
+      if command -v brew >/dev/null 2>&1; then
+        brew install ansible
+      else
+        echo "Homebrew is not installed. Please install Homebrew first, then run this script again."
+        echo "You can install Homebrew with: /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
+        exit 1
+      fi
+    else
+      echo "Unsupported OS for automatic Ansible installation. Please install Ansible manually."
+      exit 1
+    fi
+  fi
+  
+  # Check for Docker
+  if ! command -v docker >/dev/null 2>&1; then
+    echo "Docker is not installed. Please install Docker before continuing."
+    if [ "$OS_TYPE" = "Ubuntu" ]; then
+      echo "You can install Docker on Ubuntu with:"
+      echo "  sudo apt update"
+      echo "  sudo apt install -y apt-transport-https ca-certificates curl software-properties-common"
+      echo "  curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -"
+      echo "  sudo add-apt-repository \"deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable\""
+      echo "  sudo apt update"
+      echo "  sudo apt install -y docker-ce"
+      echo "  sudo usermod -aG docker $USER"
+    elif [ "$OS_TYPE" = "Darwin" ]; then
+      echo "For MacOS, download Docker Desktop from: https://www.docker.com/products/docker-desktop"
+    fi
+    exit 1
+  fi
+  
+  # Check for kubectl
+  if ! command -v kubectl >/dev/null 2>&1; then
+    echo "kubectl is not installed. It will be installed by the Ansible playbook."
+  fi
+  
+  echo "Prerequisites check completed."
+}
 
 # Function to print section headers
 print_section() {
@@ -36,32 +111,40 @@ STEPS=(
 )
 
 PLAYBOOKS=(
-  "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/kind.yml' --tags 'install, create'"
-  "ansible-galaxy collection install -r '$ANSIBLE_DIR/requirements.yml' && ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/install_dependencies.yml'"
-  "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/setup_directories.yml'"
-  "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/create_service_accounts.yml'"
-  "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/configure_k8s_namespaces.yml'"
-  "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/generate_manifests.yml'"
-  "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/install_venafi_components.yml'"
-  "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/setup_cloud_integration.yml'"
-  "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/setup_sandbox.yml'"
-  "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/create_unmanaged_kid.yml'"
-  "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/create_expiry_eddie.yml'"
-  "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/create_cipher-snake.yml'"
-  "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/create_ghost-rider.yml'"
-  "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/create_phantom-ca.yml'"
-  "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/setup_mesh_apps.yml'"
-  "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/install_istio.yml'"
-  "ansible-playbook -i ansible/inventory '$PLAYBOOK_DIR/deploy_mesh_apps.yml'"
+  "ansible-playbook -i $ANSIBLE_DIR/inventory '$PLAYBOOK_DIR/kind.yml' --tags 'install, create'"
+  "ansible-galaxy collection install -r '$ANSIBLE_DIR/requirements.yml' && ansible-playbook -i $ANSIBLE_DIR/inventory '$PLAYBOOK_DIR/install_dependencies.yml'"
+  "ansible-playbook -i $ANSIBLE_DIR/inventory '$PLAYBOOK_DIR/setup_directories.yml'"
+  "ansible-playbook -i $ANSIBLE_DIR/inventory '$PLAYBOOK_DIR/create_service_accounts.yml'"
+  "ansible-playbook -i $ANSIBLE_DIR/inventory '$PLAYBOOK_DIR/configure_k8s_namespaces.yml'"
+  "ansible-playbook -i $ANSIBLE_DIR/inventory '$PLAYBOOK_DIR/generate_manifests.yml'"
+  "ansible-playbook -i $ANSIBLE_DIR/inventory '$PLAYBOOK_DIR/install_venafi_components.yml'"
+  "ansible-playbook -i $ANSIBLE_DIR/inventory '$PLAYBOOK_DIR/setup_cloud_integration.yml'"
+  "ansible-playbook -i $ANSIBLE_DIR/inventory '$PLAYBOOK_DIR/setup_sandbox.yml'"
+  "ansible-playbook -i $ANSIBLE_DIR/inventory '$PLAYBOOK_DIR/create_unmanaged_kid.yml'"
+  "ansible-playbook -i $ANSIBLE_DIR/inventory '$PLAYBOOK_DIR/create_expiry_eddie.yml'"
+  "ansible-playbook -i $ANSIBLE_DIR/inventory '$PLAYBOOK_DIR/create_cipher-snake.yml'"
+  "ansible-playbook -i $ANSIBLE_DIR/inventory '$PLAYBOOK_DIR/create_ghost-rider.yml'"
+  "ansible-playbook -i $ANSIBLE_DIR/inventory '$PLAYBOOK_DIR/create_phantom-ca.yml'"
+  "ansible-playbook -i $ANSIBLE_DIR/inventory '$PLAYBOOK_DIR/setup_mesh_apps.yml'"
+  "ansible-playbook -i $ANSIBLE_DIR/inventory '$PLAYBOOK_DIR/install_istio.yml'"
+  "ansible-playbook -i $ANSIBLE_DIR/inventory '$PLAYBOOK_DIR/deploy_mesh_apps.yml'"
 )
 
 TOTAL_STEPS=${#STEPS[@]}
+
+# First detect the OS
+detect_os
+
+# Then run prerequisite check
+check_prerequisites
 
 # =============================================
 # Display Menu Options
 # =============================================
 clear
 print_section "CYBERARK SHOP DEPLOYMENT SETUP"
+echo "Running on detected OS: $OS_TYPE"
+echo ""
 
 # Grouped (Lettered) Options
 echo "Grouped Options:"
@@ -88,7 +171,7 @@ for (( i=0; i<TOTAL_STEPS; i++ )); do
 done
 
 echo ""
-echo "Enter a number (1-$TOTAL_STEPS) to start from that step,"
+echo "Enter a number (1-$TOTAL_STEPS) to start from a specific section,"
 echo "or a letter (A, B, C, D) for a preset grouping."
 echo "Press ENTER with no input to run the full deployment."
 echo -n "Your selection: "
@@ -146,6 +229,13 @@ echo ""
 # =============================================
 for (( i = START_INDEX; i <= END_INDEX; i++ )); do
   print_section "${STEPS[$i]}"
+  
+  # Add specific environment variables based on OS if needed
+  if [ "$OS_TYPE" = "Ubuntu" ]; then
+    # If any Ubuntu-specific environment variables are needed
+    export ANSIBLE_BECOME=true
+  fi
+  
   eval "${PLAYBOOKS[$i]}" || { echo "Error encountered during '${STEPS[$i]}'. Exiting."; exit 1; }
 done
 
