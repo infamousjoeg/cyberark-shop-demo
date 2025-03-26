@@ -65,24 +65,11 @@
 
 - name: Ensure kubectl installed (Ubuntu)
   block:
-    - name: Add Kubernetes GPG key
-      become: true
-      apt_key:
-        url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
-        state: present
-        
-    - name: Add Kubernetes repository
-      become: true
-      apt_repository:
-        repo: "deb https://apt.kubernetes.io/ kubernetes-xenial main"
-        state: present
-        
-    - name: Install kubectl
-      become: true
-      apt:
-        name: kubectl
-        state: present
-        update_cache: yes
+    - name: Download kubectl binary
+      get_url:
+        url: https://dl.k8s.io/release/v1.27.0/bin/linux/amd64/kubectl
+        dest: /usr/local/bin/kubectl
+        mode: '0755'
   when: ansible_os_family == 'Debian'
   tags:
     - install

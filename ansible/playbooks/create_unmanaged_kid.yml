@@ -19,6 +19,7 @@
       community.crypto.openssl_privatekey:
         path: "{{ key_path }}"
         size: 2048
+        mode: '0644'
 
     - name: Generate a self-signed certificate
       community.crypto.x509_certificate:
@@ -30,6 +31,17 @@
         selfsigned_digest: sha256
         selfsigned_create_subject_key_identifier: always_create
         selfsigned_version: 3
+        mode: '0644'
+
+    - name: Read key file content
+      ansible.builtin.slurp:
+        src: "{{ key_path }}"
+      register: key_content
+
+    - name: Read certificate file content
+      ansible.builtin.slurp:
+        src: "{{ cert_path }}"
+      register: cert_content
 
     - name: Create TLS secret in Kubernetes
       kubernetes.core.k8s:
@@ -41,8 +53,8 @@
         definition:
           type: kubernetes.io/tls
           data:
-            tls.crt: "{{ lookup('file', cert_path) | b64encode }}"
-            tls.key: "{{ lookup('file', key_path) | b64encode }}"
+            tls.crt: "{{ cert_content['content'] }}"
+            tls.key: "{{ key_content['content'] }}"
 
     - name: Deploy unmanaged-kid Nginx Service
       kubernetes.core.k8s:

@@ -2,6 +2,9 @@
   hosts: localhost
   connection: local
   gather_facts: false
+  vars:
+    cert_path: "files/artifacts/samples/expiry-eddie-cert.crt"
+    key_path: "files/artifacts/samples/expiry-eddie-key.key"
   tasks:
     - name: Create Long Duration Certificate Request
       ansible.builtin.copy:
@@ -19,6 +22,7 @@
       community.crypto.openssl_privatekey:
         path: files/artifacts/samples/expiry-eddie-key.key
         size: 2048
+        mode: '0644'
 
     - name: Generate a self-signed certificate
       community.crypto.x509_certificate:
@@ -30,6 +34,17 @@
         selfsigned_digest: "sha256"
         selfsigned_create_subject_key_identifier: create_if_not_provided
         selfsigned_version: 3
+        mode: '0644'
+
+    - name: Read key file content
+      ansible.builtin.slurp:
+        src: "{{ key_path }}"
+      register: key_content
+
+    - name: Read certificate file content
+      ansible.builtin.slurp:
+        src: "{{ cert_path }}"
+      register: cert_content
 
     - name: Create expiry-eddie TLS secret in Kubernetes
       kubernetes.core.k8s:
@@ -42,8 +57,8 @@
             namespace: sandbox
           type: kubernetes.io/tls
           data:
-            tls.crt: "{{ lookup('file', 'files/artifacts/samples/expiry-eddie-cert.crt') | b64encode }}"
-            tls.key: "{{ lookup('file', 'files/artifacts/samples/expiry-eddie-key.key') | b64encode }}"
+            tls.crt: "{{ cert_content['content'] }}"
+            tls.key: "{{ key_content['content'] }}"
 
     - name: Deploy expiry-eddie Service
       kubernetes.core.k8s:

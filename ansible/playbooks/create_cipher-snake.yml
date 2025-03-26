@@ -2,11 +2,15 @@
   hosts: localhost
   connection: local
   gather_facts: false
+  vars:
+    cert_path: "files/artifacts/samples/cipher-snake.svc.cluster.local.crt"
+    key_path: "files/artifacts/samples/cipher-snake.svc.cluster.local.key"
   tasks:
     - name: Generate RSA private key
       community.crypto.openssl_privatekey:
         path: files/artifacts/samples/cipher-snake.svc.cluster.local.key
         size: 1024
+        mode: '0644'
 
     - name: Generate a self-signed certificate for cipher-snake
       community.crypto.x509_certificate:
@@ -18,6 +22,17 @@
         selfsigned_digest: "sha256"
         selfsigned_create_subject_key_identifier: create_if_not_provided
         selfsigned_version: 3
+        mode: '0644'
+
+    - name: Read key file content
+      ansible.builtin.slurp:
+        src: "{{ key_path }}"
+      register: key_content
+
+    - name: Read certificate file content
+      ansible.builtin.slurp:
+        src: "{{ cert_path }}"
+      register: cert_content
 
     - name: Create cipher-snake TLS secret in Kubernetes
       kubernetes.core.k8s:
@@ -30,8 +45,8 @@
             namespace: sandbox
           type: kubernetes.io/tls
           data:
-            tls.crt: "{{ lookup('file', 'files/artifacts/samples/cipher-snake.svc.cluster.local.crt') | b64encode }}"
-            tls.key: "{{ lookup('file', 'files/artifacts/samples/cipher-snake.svc.cluster.local.key') | b64encode }}"
+            tls.crt: "{{ cert_content['content'] }}"
+            tls.key: "{{ key_content['content'] }}"
 
     - name: Deploy cipher-snake Service
       kubernetes.core.k8s:

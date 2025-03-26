@@ -1,31 +1,137 @@
+# ansible/playbooks/install_dependencies.yml
 ---
+# Purpose: Install system dependencies and tools needed for CyberArk Shop Demo
+# Handles both Ubuntu and MacOS environments with appropriate package management
 - name: Install Required Dependencies
   hosts: localhost
   connection: local
   gather_facts: yes
   tasks:
-    - name: Ensure jq is installed (Ubuntu)
+    # === SYSTEM PREREQUISITES ===
+    # Install required system packages for Ubuntu systems
+    - name: Ensure system prerequisites are installed (Ubuntu)
       become: true
       apt:
-        name: jq
+        name:
+          - jq               # JSON processor for data manipulation
+          - unzip            # Required by venctl installer
+          - curl             # Used for downloads and API interactions
+          - ca-certificates  # SSL certificates for secure connections
+          - gnupg            # GPG for key verification
+          - apt-transport-https # Secure apt transport
         state: present
         update_cache: yes
       when: ansible_os_family == 'Debian'
 
-    - name: Ensure jq is installed (MacOS)
+    # Install required system packages for MacOS systems
+    - name: Ensure required tools are installed (MacOS)
       community.general.homebrew:
-        name: jq
+        name:
+          - jq
+          - unzip
         state: present
       when: ansible_os_family == 'Darwin'
 
+    # === HELM INSTALLATION ===
+    # Direct binary installation of Helm for Ubuntu - bypasses apt repositories
+    - name: Install Helm directly (Ubuntu)
+      become: true
+      block:
+        # Detect system architecture to get the right Helm binary
+        - name: Get system architecture
+          command: uname -m
+          register: arch_output
+          changed_when: false
+        
+        # Set architecture variable for download URL
+        - name: Set architecture variable
+          set_fact:
+            helm_arch: "{{ 'arm64' if 'aarch64' in arch_output.stdout else 'amd64' }}"
+        
+        # Download Helm binary archive
+        - name: Download Helm
+          get_url:
+            url: "https://get.helm.sh/helm-v3.14.2-linux-{{ helm_arch }}.tar.gz"
+            dest: /tmp/helm.tar.gz
+            mode: '0644'
+            
+        # Create temporary directory for extraction
+        - name: Create temp directory for Helm
+          file:
+            path: /tmp/helm
+            state: directory
+            mode: '0755'
+            
+        # Extract the archive
+        - name: Extract Helm
+          unarchive:
+            src: /tmp/helm.tar.gz
+            dest: /tmp/helm
+            remote_src: yes
+            
+        # Install Helm binary to system path
+        - name: Install Helm binary
+          copy:
+            src: "/tmp/helm/linux-{{ helm_arch }}/helm"
+            dest: /usr/local/bin/helm
+            mode: '0755'
+            remote_src: yes
+            
+        # Verify installation succeeded
+        - name: Verify Helm installation
+          command: helm version
+          register: helm_version
+          changed_when: false
+      when: ansible_os_family == 'Debian'
+
+    # === VENCTL INSTALLATION ===
+    # Ensure PATH includes necessary directories
+    - name: Export PATH before venctl install (Ubuntu)
+      set_fact:
+        custom_env: { "PATH": "{{ ansible_env.PATH }}:/usr/local/bin" }
+      when: ansible_os_family == 'Debian'
+
+    # Download the venctl installer script
     - name: Download venctl installer
       ansible.builtin.get_url:
         url: "https://dl.venafi.cloud/venctl/latest/installer.sh"
         dest: "/tmp/venctl_installer.sh"
         mode: '0755'
 
+    # Run the venctl installer with proper environment
     - name: Run venctl installer
       ansible.builtin.command:
         cmd: "/bin/bash /tmp/venctl_installer.sh"
       args:
         creates: "{{ '/usr/bin/venctl' if ansible_os_family == 'Debian' else '/usr/local/bin/venctl' }}"
+      environment: "{{ custom_env | default(omit) }}"
+
+    # === VENCTL WRAPPER SCRIPT ===
+    # Create wrapper to ensure correct PATH when venctl runs
+    - name: Create venctl wrapper script (Ubuntu)
+      become: true
+      block:
+        # Check if venctl exists at original location
+        - name: Check if venctl exists at original location
+          stat:
+            path: /usr/bin/venctl
+          register: venctl_stat
+
+        # Backup original venctl binary
+        - name: Move original venctl if it exists
+          command: mv /usr/bin/venctl /usr/bin/venctl.orig
+          when: venctl_stat.stat.exists
+
+        # Create wrapper script with proper PATH
+        - name: Create wrapper script
+          copy:
+            dest: /usr/bin/venctl
+            content: |
+              #!/bin/bash
+              # Wrapper script to ensure venctl has access to Helm
+              # Adds /usr/local/bin to PATH before executing the original venctl
+              export PATH=$PATH:/usr/local/bin
+              exec /usr/bin/venctl.orig "$@"
+            mode: '0755'
+          when: venctl_stat.stat.exists
+      when: ansible_os_family == 'Debian'

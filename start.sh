@@ -82,6 +82,15 @@ check_prerequisites() {
   echo "Prerequisites check completed."
 }
 
+echo "Installing Python dependencies..."
+ansible-playbook -i $ANSIBLE_DIR/inventory "$PLAYBOOK_DIR/install_python_dependencies.yml"
+
+# Then update the playbook commands to use the config file if it exists
+if [ -f "ansible.cfg" ]; then
+  ANSIBLE_CONFIG="ansible.cfg"
+  export ANSIBLE_CONFIG
+fi
+
 # Function to print section headers
 print_section() {
   echo "============================================="

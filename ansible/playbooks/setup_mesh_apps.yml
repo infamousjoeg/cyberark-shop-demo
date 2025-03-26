@@ -10,16 +10,30 @@
     - name: Ensure Helm is installed (Ubuntu)
       become: true
       block:
-        - name: Add Helm apt repository
-          apt_repository:
-            repo: "deb https://baltocdn.com/helm/stable/debian/ all main"
-            state: present
-            
-        - name: Add apt key for Helm
-          apt_key:
+        # First download the Helm signing key
+        - name: Download Helm signing key
+          get_url:
             url: https://baltocdn.com/helm/signing.asc
+            dest: /tmp/helm-signing.asc
+            mode: '0644'
+          register: helm_key_download
+
+        # Add the key to the apt keyring
+        - name: Add Helm apt key
+          ansible.builtin.shell: |
+            cat /tmp/helm-signing.asc | gpg --dearmor > /usr/share/keyrings/helm.gpg
+          args:
+            creates: /usr/share/keyrings/helm.gpg
+          when: helm_key_download is success
+
+        # Add the repository with signed-by option
+        - name: Add Helm repository with proper key
+          ansible.builtin.apt_repository:
+            repo: "deb [arch=amd64 signed-by=/usr/share/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main"
             state: present
-            
+            filename: helm-stable
+
+        # Install Helm package
         - name: Install Helm
           apt:
             name: helm
@@ -46,7 +60,50 @@
         namespace: "mesh-apps"
         src: "files/namespaces/mesh-apps.yaml"
 
-    # Configure Docker credentials for image pulling
+    # First, determine actual Docker config path (expanding home directory)
+    - name: Set Docker config path
+      set_fact:
+        docker_config_path: "{{ ansible_env.HOME }}/.docker/config.json"
+
+    # Check if the config file exists before attempting to use it
+    - name: Check if Docker config exists
+      stat:
+        path: "{{ docker_config_path }}"
+      register: docker_config_file
+
+    # Add debug information to help troubleshoot
+    - name: Debug Docker config information
+      debug:
+        msg: "Docker config path: {{ docker_config_path }}, Exists: {{ docker_config_file.stat.exists | default(false) }}"
+
+    # Create an empty Docker config if it doesn't exist
+    - name: Create Docker config directory
+      file:
+        path: "{{ ansible_env.HOME }}/.docker"
+        state: directory
+        mode: '0755'
+      when: not docker_config_file.stat.exists
+
+    # Create a minimal Docker config if needed
+    - name: Create minimal Docker config if not exists
+      copy:
+        dest: "{{ docker_config_path }}"
+        content: '{"auths":{}}'
+        mode: '0644'
+      when: not docker_config_file.stat.exists
+      register: docker_config_created
+
+    # Read Docker config with command if it exists
+    - name: Read Docker config with command
+      command: "cat {{ docker_config_path }}"
+      register: docker_config_content
+      changed_when: false
+      when: docker_config_file.stat.exists
+      # Ignore errors in case cat fails but file exists
+      ignore_errors: yes
+      no_log: false  # For debugging, normally set to true for security
+
+    # Create Docker Hub image pull secret with appropriate config
     - name: Create Docker Hub image pull secret from local config.json
       kubernetes.core.k8s:
         state: present
@@ -55,11 +112,10 @@
           kind: Secret
           metadata:
             name: dockerhub-creds
-            namespace: mesh-apps
+            namespace: mesh-apps  # Explicitly define namespace instead of variable
           type: kubernetes.io/dockerconfigjson
           data:
-            .dockerconfigjson: "{{ lookup('file', '~/.docker/config.json') | b64encode }}"
-
+            .dockerconfigjson: "{{ (docker_config_content.stdout | b64encode) if (docker_config_content is defined and docker_config_content.rc == 0) else '{\"auths\":{}}' | b64encode }}"
     # Setup trust anchor for certificate validation
     - name: Create Venafi Trust Anchor Secret
       kubernetes.core.k8s:
