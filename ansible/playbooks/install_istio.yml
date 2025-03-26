@@ -1,10 +1,21 @@
 - name: Install Istio Service Mesh
   hosts: localhost
   connection: local
-  gather_facts: no
+  gather_facts: yes
   vars_files:
     - vars/vars.yml
   tasks:
+    # Docker config location differs between Ubuntu and MacOS
+    - name: Set Docker config path (Ubuntu)
+      set_fact:
+        docker_config_path: "{{ ansible_env.HOME }}/.docker/config.json"
+      when: ansible_os_family == 'Debian'
+
+    - name: Set Docker config path (MacOS)
+      set_fact:
+        docker_config_path: "{{ ansible_env.HOME }}/.docker/config.json"
+      when: ansible_os_family == 'Darwin'
+
     - name: Create Docker Hub image pull secret from local config.json
       kubernetes.core.k8s:
         state: present
@@ -16,7 +27,7 @@
             namespace: istio-system
           type: kubernetes.io/dockerconfigjson
           data:
-            .dockerconfigjson: "{{ lookup('file', '~/.docker/config.json') | b64encode }}"
+            .dockerconfigjson: "{{ lookup('file', docker_config_path) | b64encode }}"
 
     - name: Add Istio Helm Repository
       kubernetes.core.helm_repository:
@@ -59,14 +70,12 @@
                   - name: ENABLE_CA_SERVER
                     value: "false"
 
-
     - name: Install Istio Ingress Gateway
       kubernetes.core.helm:
         name: istio-ingressgateway
         chart_ref: istio/gateway
         release_namespace: istio-system
         create_namespace: yes
-        #wait: yes
         values:
           global:
             caAddress: "cert-manager-istio-csr.cyberark.svc:443"
@@ -74,14 +83,12 @@
           imagePullSecrets:
             - name: dockerhub-creds
 
-
     - name: Install Istio Egress Gateway
       kubernetes.core.helm:
         name: istio-egressgateway
         chart_ref: istio/gateway
         release_namespace: istio-system
         create_namespace: yes
-        #wait: yes
         values:
           global:
             caAddress: "cert-manager-istio-csr.cyberark.svc:443"
