@@ -2,12 +2,21 @@
 - name: Install Required Dependencies
   hosts: localhost
   connection: local
-  gather_facts: no
+  gather_facts: yes
   tasks:
-    - name: Ensure jq is installed
+    - name: Ensure jq is installed (Ubuntu)
+      become: true
+      apt:
+        name: jq
+        state: present
+        update_cache: yes
+      when: ansible_os_family == 'Debian'
+
+    - name: Ensure jq is installed (MacOS)
       community.general.homebrew:
         name: jq
         state: present
+      when: ansible_os_family == 'Darwin'
 
     - name: Download venctl installer
       ansible.builtin.get_url:
@@ -19,4 +28,4 @@
       ansible.builtin.command:
         cmd: "/bin/bash /tmp/venctl_installer.sh"
       args:
-        creates: /usr/local/bin/venctl
+        creates: "{{ '/usr/bin/venctl' if ansible_os_family == 'Debian' else '/usr/local/bin/venctl' }}"
