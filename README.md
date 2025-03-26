@@ -103,7 +103,7 @@ brew install docker
 1. Clone this repository:
 
 ```bash
-git clone https://github.com/yourusername/cyberark-shop-demo.git
+git clone https://github.com/infamousjoeg/cyberark-shop-demo.git
 cd cyberark-shop-demo
 ```
 
