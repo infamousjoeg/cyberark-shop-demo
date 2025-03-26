@@ -2,15 +2,38 @@
 - name: Setup Configuration for Service Mesh
   hosts: localhost
   connection: local
-  gather_facts: no
+  gather_facts: yes  # Gather facts to detect OS
   vars_files:
     - vars/vars.yml
   tasks:
-    - name: Ensure Helm is installed
+    # OS-specific Helm installation
+    - name: Ensure Helm is installed (Ubuntu)
+      become: true
+      block:
+        - name: Add Helm apt repository
+          apt_repository:
+            repo: "deb https://baltocdn.com/helm/stable/debian/ all main"
+            state: present
+            
+        - name: Add apt key for Helm
+          apt_key:
+            url: https://baltocdn.com/helm/signing.asc
+            state: present
+            
+        - name: Install Helm
+          apt:
+            name: helm
+            state: present
+            update_cache: yes
+      when: ansible_os_family == 'Debian'
+
+    - name: Ensure Helm is installed (MacOS)
       community.general.homebrew:
         name: helm
         state: present
+      when: ansible_os_family == 'Darwin'
 
+    # Configure Kubernetes namespaces for service mesh
     - name: Apply Istio System Namespace
       kubernetes.core.k8s:
         state: present
@@ -23,6 +46,7 @@
         namespace: "mesh-apps"
         src: "files/namespaces/mesh-apps.yaml"
 
+    # Configure Docker credentials for image pulling
     - name: Create Docker Hub image pull secret from local config.json
       kubernetes.core.k8s:
         state: present
@@ -36,6 +60,7 @@
           data:
             .dockerconfigjson: "{{ lookup('file', '~/.docker/config.json') | b64encode }}"
 
+    # Setup trust anchor for certificate validation
     - name: Create Venafi Trust Anchor Secret
       kubernetes.core.k8s:
         state: present
@@ -50,18 +75,21 @@
           data:
             root-cert.pem: "{{ lookup('file', '{{ trust_anchor_root_ca_pem }}') | b64encode }}"
 
+    # Configure Istio CSR integration
     - name: Generate Istio CSR Configuration
       ansible.builtin.copy:
         src: "files/templates/helm/istio-csr-values.yaml.j2"
         dest: "files/artifacts/venafi-install/istio-csr-values.yaml"
         mode: '0644'
 
+    # Apply Firefly Mesh Issuer for managing certificates
     - name: Apply Firefly Mesh Issuer
       kubernetes.core.k8s:
         state: present
         namespace: "istio-system"
         src: "files/templates/servicemesh/firefly-mesh-wi-issuer.yaml"
 
+    # Create ConfigMap for Istio CSR
     - name: Create Istio CSR CA ConfigMap
       kubernetes.core.k8s:
         state: present
@@ -77,6 +105,7 @@
             issuer-kind: Issuer
             issuer-group: firefly.venafi.com
 
+    # Configure trust anchor for Firefly
     - name: Create Firefly Trust Anchor
       ansible.builtin.template:
         src: "files/templates/servicemesh/firefly-trust-anchor.yaml.j2"
@@ -89,6 +118,7 @@
         namespace: "istio-system"
         src: "files/artifacts/venafi-install/firefly-trust-anchor.yaml"
 
+    # Generate and apply Venafi Helm manifests for Istio CSR
     - name: Generate Venafi Helm manifests for Istio CSR
       ansible.builtin.command:
         cmd: |
@@ -107,6 +137,7 @@
         dest: "files/artifacts/venafi-install/venafi-manifests-istio.yaml"
         mode: '0644'
     
+    # Apply Venafi manifests for Istio
     - name: Sync Venafi Istio manifests using venctl
       ansible.builtin.command:
         cmd: |
@@ -116,6 +147,7 @@
       register: venctl_sync_output
       changed_when: venctl_sync_output.rc == 0 
 
+    # Generate Istio configuration
     - name: Install Istio Configuration
       ansible.builtin.template:
         src: "files/templates/servicemesh/istio-config.yaml.j2"
