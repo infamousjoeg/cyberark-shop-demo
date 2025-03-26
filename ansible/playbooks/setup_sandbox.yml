@@ -2,14 +2,21 @@
 - name: Deploy resources to the Sandbox namespace
   hosts: localhost
   connection: local
-  gather_facts: no
-  vars_files:
-    - vars/vars.yml
+  gather_facts: yes
   tasks:
-    - name: Ensure jq is installed
+    - name: Ensure jq is installed (Ubuntu)
+      become: true
+      apt:
+        name: jq
+        state: present
+        update_cache: yes
+      when: ansible_os_family == 'Debian'
+
+    - name: Ensure jq is installed (MacOS)
       community.general.homebrew:
         name: jq
         state: present
+      when: ansible_os_family == 'Darwin'
 
     - name: Pull nginx:latest Docker image
       community.docker.docker_image:
@@ -40,7 +47,6 @@
           type: kubernetes.io/dockerconfigjson
           data:
             .dockerconfigjson: "{{ lookup('file', '~/.docker/config.json') | b64encode }}"
-
 
     - name: Apply Certificate Policy for Sandbox
       kubernetes.core.k8s:
