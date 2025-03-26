@@ -1,80 +1,248 @@
-# cyberark-shop-demo <!-- omit in toc -->
+# CyberArk Shop Demo
 
-A microservice digital store demonstration integrated with CyberArk's Identity Security Platform and Venafi's Cloud Control Plane.
+A microservice digital store demonstration integrated with CyberArk's Identity Security Platform and Venafi's Cloud Control Plane. This repository provides a complete demo environment that showcases secure service-to-service authentication, certificate management, and secret handling.
 
-## Table of Contents <!-- omit in toc -->
-- [Pre-Requisites](#pre-requisites)
+## Table of Contents
+
+- [Overview](#overview)
+- [Architecture](#architecture)
+- [Prerequisites](#prerequisites)
+- [Supported Platforms](#supported-platforms)
+- [Installation](#installation)
 - [Usage](#usage)
-- [Ansible kind Role](#ansible-kind-role)
-  - [Usage based on Tags](#usage-based-on-tags)
-    - [Example Usage](#example-usage)
+- [Component Breakdown](#component-breakdown)
+- [Ansible KinD Role](#ansible-kind-role)
+- [Certificate Management Scenarios](#certificate-management-scenarios)
+- [Troubleshooting](#troubleshooting)
 - [License](#license)
 
-## Pre-Requisites
+## Overview
 
-- [Conjur Cloud CLI](https://marketplace.cyberark.com)
-- [Ansible](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html#selecting-an-ansible-package-and-version-to-install)
-  - Kubernetes Ansible Module
-    - `python3 -m pip install kubernetes`
-  - Cryptography Ansible Module
-    - `python3 -m pip install cryptography`
-- [Venafi Control Plane](https://venafi.com/try-venafi/tls-protect-for-kubernetes/)
-- Your local Docker Config credentials will be used to pull Istio images.
-  - Ensure you're authenticated to avoid rate limiting issues.
+The CyberArk Shop Demo creates a complete microservices environment integrated with:
+
+- **CyberArk's Identity Security Platform** - For secret management and access control
+- **Venafi's Cloud Control Plane** - For certificate lifecycle management
+- **Istio Service Mesh** - For secure service-to-service communication
+
+The demo showcases real-world security patterns including:
+- Non-human identity security
+- Certificate lifecycle management
+- Secret rotation and access
+- Workload identity
+- Service mesh security
+
+## Architecture
+
+The demo deploys a Kubernetes-in-Docker (KinD) cluster with several components:
+
+1. **Base Infrastructure**
+   - KinD Kubernetes cluster
+   - Venafi Control Plane integration
+   - CyberArk Conjur Cloud integration
+
+2. **Certificate Management**
+   - Certificate Managers
+   - Approver Policies
+   - Venafi Firefly
+
+3. **Service Mesh**
+   - Istio service mesh
+   - Microservice applications
+   - mTLS communication
+
+4. **Demonstration Scenarios**
+   - Various certificate scenarios (good and bad)
+   - Secret access patterns
+   - Workload identity
+
+## Supported Platforms
+
+This demo has been tested and is fully supported on:
+
+- **Ubuntu Linux** (18.04 LTS, 20.04 LTS, 22.04 LTS)
+- **MacOS** (Catalina, Big Sur, Monterey, Ventura)
+
+## Prerequisites
+
+### General Requirements
+
+- Docker
+- Internet connection (for pulling required images)
+- CyberArk Secrets Manager/Conjur Cloud account
+- Venafi Control Plane account
+
+### Ubuntu-specific Requirements
+
+```bash
+# Install base dependencies
+sudo apt update
+sudo apt install -y curl git
+
+# Install Docker (if not already installed)
+sudo apt install -y apt-transport-https ca-certificates curl software-properties-common
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+sudo apt update
+sudo apt install -y docker-ce
+sudo usermod -aG docker $USER
+# Log out and back in for group changes to take effect
+```
+
+### MacOS-specific Requirements
+
+```bash
+# Install Homebrew (if not already installed)
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# Install Docker (or download Docker Desktop from docker.com)
+brew install docker
+```
+
+## Installation
+
+1. Clone this repository:
+
+```bash
+git clone https://github.com/yourusername/cyberark-shop-demo.git
+cd cyberark-shop-demo
+```
+
+2. Configure settings in the variables file:
+
+```bash
+cp ansible/playbooks/vars/vars.template.yml ansible/playbooks/vars/vars.yml
+```
+
+Edit the `vars.yml` file with your personal configuration details:
+- Venafi API key and zone information
+- CyberArk credentials and zone information
+- Resource naming preferences
+
+3. Run the installation script:
+
+```bash
+./start.sh
+```
+
+This script will automatically:
+- Detect your operating system (Ubuntu or MacOS)
+- Install necessary dependencies
+- Configure and deploy the entire demo environment
 
 ## Usage
 
-`./start.sh`
+The `start.sh` script provides an interactive menu that allows you to:
 
-This will prompt a menu for you to choose from:
+- Deploy the complete environment
+- Deploy only specific components
+- Start from any specific step
 
-```plaintext
+```
 =============================================
-WELCOME TO THE CYBERARK SHOP DEPLOYMENT SETUP
+CYBERARK SHOP DEPLOYMENT SETUP
 =============================================
 
-This script will execute the following steps:
+Grouped Options:
+  A) Deploy KinD Cluster Only               -> Step 1
+  B) Deploy (A) & Venafi Components          -> Steps 1-8
+  C) Deploy (A), (B) & TLS Protect for K8s    -> Steps 1-14
+  D) Deploy (A), (B), (C) & Workload Identity  -> Steps 1-17 (Default)
 
-1. Install & Create kind Cluster
-2. Install dependencies (venctl, jq, etc.)
-3. Create necessary directories
-4. Deploy service accounts
-5. Setup Kubernetes namespaces
-6. Generate Venafi manifests
-7. Deploy Venafi components
-8. Setup Venafi Cloud integration
-9. Deploy sandbox resources
-10. Create Unmanaged Kid in Nginx
-11. Create Expiry Eddie - Long Duration Cert
-12. Create Cipher-Snake - Bad Key Size
-13. Create Ghost-Rider - Orphan Cert
-14. Create Phantom-CA & Certificate
-15. Setup Configuration for Service Mesh
-16. Install Istio Service Mesh
-17. Deploy CyberArk Shop Microservice App with Firefly
-
-Before continuing, please review and modify any necessary variables in:
-  → ansible/playbooks/vars/vars.yml
-
-Enter a number to start from a specific section, or press [ENTER] to start from the beginning:
+Detailed Steps:
+   1. [Group A] Install & Create kind Cluster
+   2. [Group B] Install dependencies (venctl, jq, etc.)
+   3. [Group B] Create necessary directories
+   ...
 ```
 
-## Ansible kind Role
+## Component Breakdown
 
-As part of this project, an Ansible Role for managing Kubernetes-in-Docker (KinD) has been developed.
+### 1. KinD Cluster
 
-### Usage based on Tags
+A local Kubernetes cluster running inside Docker containers, providing a lightweight environment for the demo.
 
-|Tag|Actions Performed|
-|---|---|
-|install|Installs docker, kubectl, kind|
-|create|Creates kind cluster|
-|delete|Deletes kind cluster|
-|clean|Clean up docker, kubectl, kind|
+### 2. Venafi Components
 
-#### Example Usage
+- **Certificate Manager**: Automates certificate lifecycle
+- **Venafi Control Plane**: External certificate authority integration
+- **Venafi Firefly**: Dynamic certificate policy enforcement
 
-`ansible-playbook ansible/kind.yml --tags "install, create"`
+### 3. CyberArk Integration
+
+- **Conjur Cloud**: Cloud-based secrets management
+- **External Secrets Operator**: Kubernetes integration for secrets
+- **JWT Authentication**: Secure identity verification
+
+### 4. Service Mesh
+
+- **Istio**: Service mesh for secure communication
+- **Kiali**: Service mesh visualization
+- **Prometheus/Grafana**: Monitoring and metrics
+
+### 5. Demo Applications
+
+- **Microservices Demo**: Sample application with multiple services
+- **Certificate Scenarios**: Various certificate configurations for testing and demonstration
+
+## Ansible KinD Role
+
+The project includes a custom Ansible role for managing Kubernetes-in-Docker (KinD) clusters.
+
+### Usage by Tags
+
+| Tag | Actions Performed |
+|-----|-------------------|
+| install | Installs docker, kubectl, kind |
+| create | Creates kind cluster |
+| delete | Deletes kind cluster |
+| clean | Clean up docker, kubectl, kind |
+
+### Example Usage
+
+```bash
+ansible-playbook ansible/kind.yml --tags "install, create"
+```
+
+## Certificate Management Scenarios
+
+The demo includes several certificate scenarios to demonstrate different aspects of certificate management:
+
+1. **Unmanaged Kid**: Self-signed certificate not managed by Venafi
+2. **Expiry Eddie**: Long-duration certificate demonstration (1 year)
+3. **Cipher-Snake**: Certificate with bad key size (1024-bit)
+4. **Ghost-Rider**: Orphaned certificate example
+5. **Phantom-CA**: Custom CA certificate demonstration
+
+These scenarios help demonstrate certificate-related security risks and proper management practices.
+
+## Troubleshooting
+
+### Common Issues
+
+#### Docker Permission Issues (Ubuntu)
+
+If you encounter permission issues with Docker:
+
+```bash
+sudo usermod -aG docker $USER
+# Log out and back in, or run:
+newgrp docker
+```
+
+#### KinD Cluster Creation Fails
+
+Ensure you have enough resources allocated to Docker:
+- At least 4GB of available memory
+- At least 2 CPU cores
+
+#### Venafi Authentication Issues
+
+Verify your API key is correct and has the necessary permissions.
+
+#### Conjur/CyberArk Connection Issues
+
+Ensure your subdomain and credentials are correctly configured in `vars.yml`.
 
 ## License
+
 [MIT](LICENSE)
