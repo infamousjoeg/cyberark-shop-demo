@@ -2,8 +2,24 @@
 
 resource_suffix: 1234567890
 team_name: DevSecOps
-venaficloud_api_key: xxxxxxxxxxxxxxxxxxxxx
+venaficloud_api_key: # https://cyberark.github.io/summon & https://github.com/infamousjoeg/conceal
 zone_private_ca: 'Application\IssuingTemplate'
+
+cyberark_subdomain: subdomain # https://subdomain.cyberark.cloud
+cyberark_service_user: ServiceUser@cyberark.cloud.0000
+cyberark_service_secret: # https://cyberark.github.io/summon & https://github.com/infamousjoeg/conceal
+
+cyberark_safe_name: cyberark-shop-demo
+cyberark_safe_owner: Privilege Cloud Admins
+cyberark_safe_owner_directory: CyberArk Cloud Directory
+cyberark_safe_owner_type: Role
+
+cyberark_pgsql_platform_id: PostgreSQL
+cyberark_pgsql_address: postgres.example.com
+cyberark_pgsql_username: postgres
+
+conjur_authn_service_id: eso-mesh-apps
+conjur_edge_url: edge.example.com # can also be https://subdomain.secretsmgr.cyberark.cloud if not using Edge
 
 # Required for service mesh (mesh-apps) use cases
 zone_public_ca: 'Application\IssuingTemplate'
@@ -11,6 +27,10 @@ domain_for_mesh_apps: k8s.example.com
 aws_hosted_zone_id: Z01234567890HI0I6LA
 venaficloud_builtin_ica_root_ca_pem: files/venafi-root-ca.pem
 trust_anchor_root_ca_pem: "{{ venaficloud_builtin_ica_root_ca_pem }}"
+
+#########################################
+# CHANGES BELOW SHOULD NOT BE NEEDED
+#########################################
 
 # Docker Hub istio images
 istio_docker_images:

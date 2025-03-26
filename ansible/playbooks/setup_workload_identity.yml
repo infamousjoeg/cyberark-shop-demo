@@ -1,0 +1,30 @@
+- name: Setup Workload Identity
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  vars_files:
+    - vars/vars.yml
+  tasks:
+    - name: Create Workload Identity policy
+      ansible.builtin.template:
+        src: "files/templates/external-secrets/policy/workload-identity.yaml.j2"
+        dest: "files/artifacts/conjur/workload-identity-policy.yaml"
+        mode: '0644'
+    
+    - name: Load Workload Identity policy
+      ansible.builtin.command:
+        cmd: "conjur policy load -b data -f files/artifacts/conjur/workload-identity-policy.yaml"
+      register: workload_identity_result
+      changed_when: "'Loaded policy' in workload_identity_result.stdout"
+    
+    - name: Create JWT Authenticator grant policy
+      ansible.builtin.template:
+        src: "files/templates/external-secrets/policy/grant-authn-jwt.yaml.j2"
+        dest: "files/artifacts/conjur/grant-authn-jwt.yaml"
+        mode: '0644'
+    
+    - name: Load Workload Identity grant policy
+      ansible.builtin.command:
+        cmd: "conjur policy load -b conjur/authn-jwt -f files/artifacts/conjur/grant-authn-jwt.yaml"
+      register: authn_jwt_grant_result
+      changed_when: "'Loaded policy' in authn_jwt_grant_result.stdout"

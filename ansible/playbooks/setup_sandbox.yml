@@ -27,6 +27,20 @@
         state: present
         namespace: sandbox
         src: "files/namespaces/sandbox.yaml"
+    
+    - name: Create Docker Hub image pull secret from local config.json
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: dockerhub-creds
+            namespace: sandbox
+          type: kubernetes.io/dockerconfigjson
+          data:
+            .dockerconfigjson: "{{ lookup('file', '~/.docker/config.json') | b64encode }}"
+
 
     - name: Apply Certificate Policy for Sandbox
       kubernetes.core.k8s:

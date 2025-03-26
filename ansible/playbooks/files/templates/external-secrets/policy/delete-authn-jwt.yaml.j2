@@ -1,0 +1,16 @@
+- !delete
+  record: !webservice {{ conjur_authn_service_id }}
+- !delete
+  record: !group {{ conjur_authn_service_id }}/apps
+- !delete
+  record: !variable {{ conjur_authn_service_id }}/identity-path
+- !delete
+  record: !variable {{ conjur_authn_service_id }}/issuer
+- !delete
+  record: !variable {{ conjur_authn_service_id }}/jwks-uri
+- !delete
+  record: !variable {{ conjur_authn_service_id }}/token-app-property
+- !delete
+  record: !variable {{ conjur_authn_service_id }}/ca-cert
+- !delete
+  record: !policy {{ conjur_authn_service_id }}

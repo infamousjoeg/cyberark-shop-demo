@@ -1,0 +1,92 @@
+---
+- name: Configure Conjur JWT Authenticator
+  hosts: localhost
+  connection: local
+  gather_facts: yes
+  vars_files:
+    - vars/vars.yml
+  tasks:
+    - name: Create directory for template files
+      ansible.builtin.file:
+        path: "files/artifacts/conjur"
+        state: directory
+        mode: '0755'
+
+    - name: Get Kubernetes JWKS URI
+      ansible.builtin.shell: |
+        kubectl get --raw /.well-known/openid-configuration | jq -r '.jwks_uri'
+      register: kube_jwks_uri
+      changed_when: false
+    
+    - name: Get Kubernetes JWT Issuer
+      ansible.builtin.shell: |
+        kubectl get --raw /.well-known/openid-configuration | jq -r '.issuer'
+      register: kube_issuer
+      changed_when: false
+
+    - name: Get Kubernetes CA certificate
+      ansible.builtin.shell: |
+        kubectl config view --raw -o jsonpath='{.clusters[0].cluster.certificate-authority-data}' | base64 -d
+      register: kube_ca_cert
+      changed_when: false
+
+    - name: Initialize Conjur CLI
+      ansible.builtin.command:
+        cmd: "conjur init -u {{ cyberark_subdomain }}.secretsmgr.cyberark.cloud"
+      args:
+        creates: "{{ ansible_env.HOME }}/.conjurrc"
+
+    - name: Login to Conjur Cloud 
+      ansible.builtin.command:
+        cmd: "conjur login -i {{ cyberark_service_user }} -p {{ cyberark_service_secret }}"
+      register: conjur_login
+      changed_when: "'Successfully logged in to Conjur Cloud' in conjur_login.stdout"
+      #no_log: true
+
+    - name: Create Conjur JWT Authenticator Policy
+      ansible.builtin.template:
+        src: "files/templates/external-secrets/policy/authn-jwt.yaml.j2"
+        dest: "files/artifacts/conjur/authn-jwt-policy.yaml"
+        mode: '0644'
+
+    - name: Load JWT Authenticator Policy
+      ansible.builtin.command:
+        cmd: "conjur policy load -b conjur/authn-jwt -f files/artifacts/conjur/authn-jwt-policy.yaml"
+      register: jwt_policy_result
+      changed_when: "'Loaded policy' in jwt_policy_result.stdout"
+
+    - name: Enable JWT Authenticator
+      ansible.builtin.command:
+        cmd: "conjur authenticator enable --id authn-jwt/{{ conjur_authn_service_id }}"
+      register: enable_result
+      changed_when: "'enabled successfully' in enable_result.stdout"
+
+    - name: Set JWT Authenticator Token App Property
+      ansible.builtin.command:
+        cmd: "conjur variable set -i conjur/authn-jwt/{{ conjur_authn_service_id }}/token-app-property -v 'sub'"
+      register: var_result
+      changed_when: "'Value added' in var_result.stdout"
+
+    - name: Set JWT Authenticator Identity Path
+      ansible.builtin.command:
+        cmd: "conjur variable set -i conjur/authn-jwt/{{ conjur_authn_service_id }}/identity-path -v 'data/cyberark-shop-demo/cd/kubernetes'"
+      register: var_result
+      changed_when: "'Value added' in var_result.stdout"
+
+    - name: Set JWT Authenticator Issuer
+      ansible.builtin.command:
+        cmd: "conjur variable set -i conjur/authn-jwt/{{ conjur_authn_service_id }}/issuer -v '{{ kube_issuer.stdout }}'"
+      register: var_result
+      changed_when: "'Value added' in var_result.stdout"
+
+    - name: Set JWT Authenticator JWKS URI
+      ansible.builtin.command:
+        cmd: "conjur variable set -i conjur/authn-jwt/{{ conjur_authn_service_id }}/jwks-uri -v '{{ kube_jwks_uri.stdout }}'"
+      register: var_result
+      changed_when: "'Value added' in var_result.stdout"
+    
+    - name: Set JWT Authenticator CA Cert
+      ansible.builtin.command:
+        cmd: "conjur variable set -i conjur/authn-jwt/{{ conjur_authn_service_id }}/ca-cert -v '{{ kube_ca_cert.stdout }}'"
+      register: var_result
+      changed_when: "'Value added' in var_result.stdout"

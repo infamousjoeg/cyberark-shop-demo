@@ -12,6 +12,7 @@ A microservice digital store demonstration integrated with CyberArk's Identity S
 
 ## Pre-Requisites
 
+- [Conjur Cloud CLI](https://marketplace.cyberark.com)
 - [Ansible](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html#selecting-an-ansible-package-and-version-to-install)
   - Kubernetes Ansible Module
     - `python3 -m pip install kubernetes`

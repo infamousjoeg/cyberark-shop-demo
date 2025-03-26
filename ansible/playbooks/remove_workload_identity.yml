@@ -1,0 +1,18 @@
+- name: Remove Workload Identity
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  vars_files:
+    - vars/vars.yml
+  tasks:
+    - name: Create Workload Identity delete policy
+      ansible.builtin.template:
+        src: "files/templates/external-secrets/policy/delete-workload-identity.yaml.j2"
+        dest: "files/artifacts/conjur/delete-workload-identity-policy.yaml"
+        mode: '0644'
+    
+    - name: Load Workload Identity delete policy
+      ansible.builtin.command:
+        cmd: "conjur policy update -b data -f files/artifacts/conjur/delete-workload-identity-policy.yaml"
+      register: workload_identity_result
+      changed_when: "'Loaded policy' in workload_identity_result.stdout"
