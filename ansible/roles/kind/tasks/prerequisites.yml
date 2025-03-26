@@ -1,24 +1,96 @@
 ---
 
-- name: Ensure docker installed
-  command:
-    cmd: docker --version
-  register: docker_valid
-  ignore_errors: yes
+- name: Ensure docker installed (Ubuntu)
+  block:
+    - name: Check if docker is installed
+      command:
+        cmd: docker --version
+      register: docker_valid
+      ignore_errors: yes
+      
+    - name: Install Docker dependencies
+      become: true
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+        state: present
+      when: docker_valid.failed and ansible_os_family == 'Debian'
+      
+    - name: Add Docker GPG key
+      become: true
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+      when: docker_valid.failed and ansible_os_family == 'Debian'
+      
+    - name: Add Docker repository
+      become: true
+      apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+      when: docker_valid.failed and ansible_os_family == 'Debian'
+      
+    - name: Install Docker
+      become: true
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+        state: present
+      when: docker_valid.failed and ansible_os_family == 'Debian'
+      
+    - name: Add user to docker group
+      become: true
+      user:
+        name: "{{ ansible_user_id }}"
+        groups: docker
+        append: yes
+      when: docker_valid.failed and ansible_os_family == 'Debian'
+  when: ansible_os_family == 'Debian'
   tags:
     - install
 
-- name: Install docker via Homebrew
+- name: Ensure docker installed (MacOS)
   homebrew:
     name: docker
     state: present
-  when: docker_valid.failed
+  when: docker_valid.failed and ansible_os_family == 'Darwin'
   tags:
     - install
 
-- name: Ensure kubectl installed
+- name: Ensure kubectl installed (Ubuntu)
+  block:
+    - name: Add Kubernetes GPG key
+      become: true
+      apt_key:
+        url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+        state: present
+        
+    - name: Add Kubernetes repository
+      become: true
+      apt_repository:
+        repo: "deb https://apt.kubernetes.io/ kubernetes-xenial main"
+        state: present
+        
+    - name: Install kubectl
+      become: true
+      apt:
+        name: kubectl
+        state: present
+        update_cache: yes
+  when: ansible_os_family == 'Debian'
+  tags:
+    - install
+
+- name: Ensure kubectl installed (MacOS)
   homebrew:
     package: kubectl
     state: present
+  when: ansible_os_family == 'Darwin'
   tags:
     - install
