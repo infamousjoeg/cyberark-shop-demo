@@ -1,8 +1,21 @@
 ---
 
-- name: Install kind via Homebrew
+- name: Install kind via APT repository (Ubuntu)
+  block:
+    - name: Download kind binary
+      become: true
+      get_url:
+        url: https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64
+        dest: /usr/local/bin/kind
+        mode: '0755'
+  when: ansible_os_family == 'Debian'
+  tags:
+    - install
+
+- name: Install kind via Homebrew (MacOS)
   homebrew:
     package: kind
     state: present
+  when: ansible_os_family == 'Darwin'
   tags:
     - install
