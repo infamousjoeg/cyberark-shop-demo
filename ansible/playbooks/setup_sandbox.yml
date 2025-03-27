@@ -58,7 +58,7 @@
           type: kubernetes.io/dockerconfigjson
           data:
             .dockerconfigjson: "{{ lookup('file', docker_config_path) | b64encode }}"
-      when: docker_config_exists.stat.exists
+      when: docker_config_exists.stat.exists and ansible_os_family == 'Darwin'
 
     - name: Create empty Docker config if not exists
       block:
@@ -78,7 +78,7 @@
               type: kubernetes.io/dockerconfigjson
               data:
                 .dockerconfigjson: "{{ '{\"auths\":{}}' | b64encode }}"
-      when: not docker_config_exists.stat.exists
+      when: not docker_config_exists.stat.exists and ansible_os_family == 'Darwin'
 
     - name: Apply Certificate Policy for Sandbox
       kubernetes.core.k8s:

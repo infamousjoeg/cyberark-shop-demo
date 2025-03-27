@@ -23,6 +23,7 @@
       ansible.builtin.file:
         state: absent
         name: "files/artifacts"
+      become: yes
 
     - name: Delete mesh-apps Namespace
       kubernetes.core.k8s:
