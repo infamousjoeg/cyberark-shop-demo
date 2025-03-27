@@ -2,9 +2,36 @@
   hosts: localhost
   connection: local
   gather_facts: no
+  become: yes
   vars_files:
     - vars/vars.yml
   tasks:
+    # Ensure directory exists for storing the suffix
+    - name: Ensure artifacts/conjur directory exists
+      ansible.builtin.file:
+        path: "files/artifacts/conjur"
+        state: directory
+        mode: '0755'
+
+    # Generate a random 6-character alphanumeric suffix using Python
+    - name: Generate random alphanumeric suffix
+      ansible.builtin.shell: |
+        python3 -c "import random; import string; print(''.join(random.choice(string.ascii_letters + string.digits) for _ in range(6)))"
+      register: random_suffix
+      changed_when: false  # This task never changes the system
+
+    # Save the suffix for later use
+    - name: Save the suffix to a file
+      ansible.builtin.copy:
+        content: "{{ random_suffix.stdout }}"
+        dest: "files/artifacts/conjur/resource_suffix.txt"
+        mode: '0644'
+
+    # Set a variable for immediate use in the current playbook
+    - name: Set suffix as a fact
+      ansible.builtin.set_fact:
+        cyberark_safe_name: "{{ cyberark_safe_name }}-{{ random_suffix.stdout }}"
+
     - name: "Discover Platform Endpoints for {{ cyberark_subdomain }}.cyberark.cloud"
       ansible.builtin.uri:
         url: "https://platform-discovery.cyberark.cloud/api/v2/services/subdomain/{{ cyberark_subdomain }}"

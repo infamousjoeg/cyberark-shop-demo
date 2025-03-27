@@ -32,7 +32,7 @@
 
     - name: Initialize Conjur CLI
       ansible.builtin.command:
-        cmd: "conjur init -u {{ cyberark_subdomain }}.secretsmgr.cyberark.cloud"
+        cmd: "conjur init -u https://{{ cyberark_subdomain }}.secretsmgr.cyberark.cloud/api"
       args:
         creates: "{{ ansible_env.HOME }}/.conjurrc"
 

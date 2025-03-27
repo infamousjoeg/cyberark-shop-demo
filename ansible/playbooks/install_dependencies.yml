@@ -88,7 +88,7 @@
     # Ensure PATH includes necessary directories
     - name: Export PATH before venctl install (Ubuntu)
       set_fact:
-        custom_env: { "PATH": "{{ ansible_env.PATH }}:/usr/local/bin" }
+        custom_env: { "PATH": "{{ ansible_env.PATH }}:/usr/bin" }
       when: ansible_os_family == 'Debian'
 
     # Download the venctl installer script
@@ -105,33 +105,3 @@
       args:
         creates: "{{ '/usr/bin/venctl' if ansible_os_family == 'Debian' else '/usr/local/bin/venctl' }}"
       environment: "{{ custom_env | default(omit) }}"
-
-    # === VENCTL WRAPPER SCRIPT ===
-    # Create wrapper to ensure correct PATH when venctl runs
-    - name: Create venctl wrapper script (Ubuntu)
-      become: true
-      block:
-        # Check if venctl exists at original location
-        - name: Check if venctl exists at original location
-          stat:
-            path: /usr/bin/venctl
-          register: venctl_stat
-
-        # Backup original venctl binary
-        - name: Move original venctl if it exists
-          command: mv /usr/bin/venctl /usr/bin/venctl.orig
-          when: venctl_stat.stat.exists
-
-        # Create wrapper script with proper PATH
-        - name: Create wrapper script
-          copy:
-            dest: /usr/bin/venctl
-            content: |
-              #!/bin/bash
-              # Wrapper script to ensure venctl has access to Helm
-              # Adds /usr/local/bin to PATH before executing the original venctl
-              export PATH=$PATH:/usr/local/bin
-              exec /usr/bin/venctl.orig "$@"
-            mode: '0755'
-          when: venctl_stat.stat.exists
-      when: ansible_os_family == 'Debian'

@@ -2,9 +2,29 @@
   hosts: localhost
   connection: local
   gather_facts: no
+  become: yes
   vars_files:
     - vars/vars.yml
   tasks:
+    # Read the suffix from the file
+    - name: Read the resource suffix from file
+      ansible.builtin.slurp:
+        src: "files/artifacts/conjur/resource_suffix.txt"
+      register: suffix_file
+      failed_when: false  # Don't fail if the file doesn't exist yet
+
+    # Set the suffix from the file content if the file exists
+    - name: Set suffix from file
+      ansible.builtin.set_fact:
+        resource_suffix: "{{ suffix_file['content'] | b64decode | trim }}"
+      when: suffix_file.failed is not defined or not suffix_file.failed
+
+    # Example of reconstructing the safe name with suffix
+    - name: Reconstruct safe name with suffix
+      ansible.builtin.set_fact:
+        cyberark_safe_name: "{{ cyberark_safe_name }}-{{ resource_suffix }}"
+      when: resource_suffix is defined
+
     - name: Create Workload Identity policy
       ansible.builtin.template:
         src: "files/templates/external-secrets/policy/workload-identity.yaml.j2"

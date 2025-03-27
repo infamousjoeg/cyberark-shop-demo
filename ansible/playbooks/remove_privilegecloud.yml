@@ -2,9 +2,29 @@
   hosts: localhost
   connection: local
   gather_facts: no
+  become: yes
   vars_files:
     - vars/vars.yml
   tasks:
+    # Read the suffix from the file
+    - name: Read the resource suffix from file
+      ansible.builtin.slurp:
+        src: "files/artifacts/conjur/resource_suffix.txt"
+      register: suffix_file
+      failed_when: false  # Don't fail if the file doesn't exist yet
+
+    # Set the suffix from the file content if the file exists
+    - name: Set suffix from file
+      ansible.builtin.set_fact:
+        resource_suffix: "{{ suffix_file['content'] | b64decode | trim }}"
+      when: suffix_file.failed is not defined or not suffix_file.failed
+
+    # Example of reconstructing the safe name with suffix
+    - name: Reconstruct safe name with suffix
+      ansible.builtin.set_fact:
+        cyberark_safe_name: "{{cyberark_safe_name}}-{{ resource_suffix }}"
+      when: resource_suffix is defined
+
     - name: "Discover Platform Endpoints for {{ cyberark_subdomain }}.cyberark.cloud"
       ansible.builtin.uri:
         url: "https://platform-discovery.cyberark.cloud/api/v2/services/subdomain/{{ cyberark_subdomain }}"
@@ -33,3 +53,13 @@
           Authorization: "Bearer {{ cyberark_login.json.access_token }}"
         status_code: 204
       ignore_errors: yes
+
+    - name: Create Delete policy for cyberark-shop-demo groups
+      ansible.builtin.template:
+        src: "files/templates/external-secrets/policy/delete-safe-groups.yaml.j2"
+        dest: "files/artifacts/conjur/delete-safe-groups.yml"
+        mode: '0644'
+
+    - name: Delete cyberark-shop-demo groups from Conjur
+      ansible.builtin.command:
+        cmd: "conjur policy update -b data -f files/artifacts/conjur/delete-safe-groups.yml"

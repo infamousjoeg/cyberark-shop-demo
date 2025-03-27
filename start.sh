@@ -2,6 +2,7 @@
 # =============================================
 # CyberArk Shop Deployment Setup Script
 # Supports both Ubuntu Linux and MacOS environments
+# Author: Joe Garcia (Original)
 # =============================================
 
 # Define paths for Ansible playbooks
@@ -89,48 +90,94 @@ print_section() {
   echo "============================================="
 }
 
+# Reordered and regrouped steps for better efficiency
+# The steps are now organized by logical component groupings:
+# 1. Infrastructure setup
+# 2. Core components
+# 3. Certificate scenarios
+# 4. Identity & Secret Management
+# 5. Service Mesh & Applications
+
 # Define steps and their corresponding playbook commands
 STEPS=(
+  # Group A: Infrastructure Setup
   "Install & Create kind Cluster"
   "Install dependencies (venctl, jq, etc.)"
   "Create necessary directories"
   "Deploy service accounts"
   "Setup Kubernetes namespaces"
+  
+  # Group B: Core Components
   "Generate Venafi manifests"
   "Deploy Venafi components"
   "Setup Venafi Cloud integration"
+  "Install External Secrets Operator"
+  
+  # Group C: Certificate Management
   "Deploy sandbox resources"
   "Create Unmanaged Kid in Nginx"
   "Create Expiry Eddie - Long Duration Cert"
   "Create Cipher-Snake - Bad Key Size"
   "Create Ghost-Rider - Orphan Cert"
   "Create Phantom-CA & Certificate"
+  
+  # Group D: Identity & Secret Management
+  "Setup Privilege Cloud integration"
+  "Setup Conjur JWT authentication"
+  "Setup Workload Identity"
+  
+  # Group E: Service Mesh & Applications
   "Setup Configuration for Service Mesh"
   "Install Istio Service Mesh"
   "Deploy CyberArk Shop Microservice App with Firefly"
 )
 
 PLAYBOOKS=(
+  # Group A: Infrastructure Setup
   "ansible-playbook -i $ANSIBLE_DIR/inventory '$PLAYBOOK_DIR/kind.yml' --tags 'install, create'"
   "ansible-galaxy collection install -r '$ANSIBLE_DIR/requirements.yml' && ansible-playbook -i $ANSIBLE_DIR/inventory '$PLAYBOOK_DIR/install_dependencies.yml'"
   "ansible-playbook -i $ANSIBLE_DIR/inventory '$PLAYBOOK_DIR/setup_directories.yml'"
   "ansible-playbook -i $ANSIBLE_DIR/inventory '$PLAYBOOK_DIR/create_service_accounts.yml'"
   "ansible-playbook -i $ANSIBLE_DIR/inventory '$PLAYBOOK_DIR/configure_k8s_namespaces.yml'"
+  
+  # Group B: Core Components
   "ansible-playbook -i $ANSIBLE_DIR/inventory '$PLAYBOOK_DIR/generate_manifests.yml'"
   "ansible-playbook -i $ANSIBLE_DIR/inventory '$PLAYBOOK_DIR/install_venafi_components.yml'"
   "ansible-playbook -i $ANSIBLE_DIR/inventory '$PLAYBOOK_DIR/setup_cloud_integration.yml'"
+  "ansible-playbook -i $ANSIBLE_DIR/inventory '$PLAYBOOK_DIR/install_external_secrets_operator.yml'"
+  
+  # Group C: Certificate Management
   "ansible-playbook -i $ANSIBLE_DIR/inventory '$PLAYBOOK_DIR/setup_sandbox.yml'"
   "ansible-playbook -i $ANSIBLE_DIR/inventory '$PLAYBOOK_DIR/create_unmanaged_kid.yml'"
   "ansible-playbook -i $ANSIBLE_DIR/inventory '$PLAYBOOK_DIR/create_expiry_eddie.yml'"
   "ansible-playbook -i $ANSIBLE_DIR/inventory '$PLAYBOOK_DIR/create_cipher-snake.yml'"
   "ansible-playbook -i $ANSIBLE_DIR/inventory '$PLAYBOOK_DIR/create_ghost-rider.yml'"
   "ansible-playbook -i $ANSIBLE_DIR/inventory '$PLAYBOOK_DIR/create_phantom-ca.yml'"
+  
+  # Group D: Identity & Secret Management
+  "ansible-playbook -i $ANSIBLE_DIR/inventory '$PLAYBOOK_DIR/setup_privilegecloud.yml'"
+  "ansible-playbook -i $ANSIBLE_DIR/inventory '$PLAYBOOK_DIR/setup_conjur_jwt.yml'"
+  "ansible-playbook -i $ANSIBLE_DIR/inventory '$PLAYBOOK_DIR/setup_workload_identity.yml'"
+  
+  # Group E: Service Mesh & Applications
   "ansible-playbook -i $ANSIBLE_DIR/inventory '$PLAYBOOK_DIR/setup_mesh_apps.yml'"
   "ansible-playbook -i $ANSIBLE_DIR/inventory '$PLAYBOOK_DIR/install_istio.yml'"
   "ansible-playbook -i $ANSIBLE_DIR/inventory '$PLAYBOOK_DIR/deploy_mesh_apps.yml'"
 )
 
 TOTAL_STEPS=${#STEPS[@]}
+
+# Define the index ranges for each logical group
+GROUP_A_START=0
+GROUP_A_END=4
+GROUP_B_START=5
+GROUP_B_END=8
+GROUP_C_START=9
+GROUP_C_END=14
+GROUP_D_START=15
+GROUP_D_END=17
+GROUP_E_START=18
+GROUP_E_END=20
 
 # First detect the OS
 detect_os
@@ -146,33 +193,36 @@ print_section "CYBERARK SHOP DEPLOYMENT SETUP"
 echo "Running on detected OS: $OS_TYPE"
 echo ""
 
-# Grouped (Lettered) Options
+# Grouped (Lettered) Options with more descriptive names
 echo "Grouped Options:"
-echo "  A) Deploy KinD Cluster Only               -> Step 1"
-echo "  B) Deploy (A) & Venafi Components          -> Steps 1-8"
-echo "  C) Deploy (A), (B) & TLS Protect for K8s    -> Steps 1-14"
-echo "  D) Deploy (A), (B), (C) & Workload Identity  -> Steps 1-17 (Default)"
+echo "  A) Infrastructure Setup                  -> Steps 1-5"
+echo "  B) Core Components                       -> Steps 1-9"
+echo "  C) Certificate Management                -> Steps 1-15"
+echo "  D) Identity & Secret Management          -> Steps 1-18"
+echo "  E) Full Deployment w/ Service Mesh       -> Steps 1-21 (Default)"
 echo ""
 
 # Detailed Numbered Menu with Group Annotations
 echo "Detailed Steps:"
 for (( i=0; i<TOTAL_STEPS; i++ )); do
   # Group assignment based on step index (0-based)
-  if [ $i -eq 0 ]; then
+  if [ $i -le $GROUP_A_END ]; then
     group="A"
-  elif [ $i -lt 8 ]; then
+  elif [ $i -le $GROUP_B_END ]; then
     group="B"
-  elif [ $i -lt 14 ]; then
+  elif [ $i -le $GROUP_C_END ]; then
     group="C"
-  else
+  elif [ $i -le $GROUP_D_END ]; then
     group="D"
+  else
+    group="E"
   fi
   printf "  %2d. [Group %s] %s\n" $((i+1)) "$group" "${STEPS[$i]}"
 done
 
 echo ""
 echo "Enter a number (1-$TOTAL_STEPS) to start from a specific section,"
-echo "or a letter (A, B, C, D) for a preset grouping."
+echo "or a letter (A, B, C, D, E) for a preset grouping."
 echo "Press ENTER with no input to run the full deployment."
 echo -n "Your selection: "
 read -r CHOICE
@@ -197,20 +247,24 @@ elif [[ "$CHOICE" =~ ^[A-Za-z]$ ]]; then
   LETTER=$(echo "$CHOICE" | tr '[:lower:]' '[:upper:]')
   case "$LETTER" in
     A)
-      END_INDEX=0
-      echo "Running Group A: Only step 1 (KinD Cluster)."
+      END_INDEX=$GROUP_A_END
+      echo "Running Group A: Infrastructure Setup (Steps 1-$((GROUP_A_END+1)))."
       ;;
     B)
-      END_INDEX=7
-      echo "Running Group B: Steps 1 through 8 (KinD + Venafi Components)."
+      END_INDEX=$GROUP_B_END
+      echo "Running Group B: Core Components (Steps 1-$((GROUP_B_END+1)))."
       ;;
     C)
-      END_INDEX=13
-      echo "Running Group C: Steps 1 through 14 (including TLS Protect for K8s)."
+      END_INDEX=$GROUP_C_END
+      echo "Running Group C: Certificate Management (Steps 1-$((GROUP_C_END+1)))."
       ;;
     D)
-      END_INDEX=$((TOTAL_STEPS - 1))
-      echo "Running Group D: Full deployment (steps 1-$TOTAL_STEPS)."
+      END_INDEX=$GROUP_D_END
+      echo "Running Group D: Identity & Secret Management (Steps 1-$((GROUP_D_END+1)))."
+      ;;
+    E)
+      END_INDEX=$GROUP_E_END
+      echo "Running Group E: Full Deployment w/ Service Mesh (Steps 1-$((GROUP_E_END+1)))."
       ;;
     *)
       echo "Invalid letter selection. Running full deployment."
@@ -227,19 +281,65 @@ echo ""
 # =============================================
 # Execute Selected Playbooks
 # =============================================
+# Track execution status for detailed reporting
+declare -A step_status
 for (( i = START_INDEX; i <= END_INDEX; i++ )); do
   print_section "${STEPS[$i]}"
   
-  # Add specific environment variables based on OS if needed
+  # Set OS-specific environment variables
   if [ "$OS_TYPE" = "Ubuntu" ]; then
-    # If any Ubuntu-specific environment variables are needed
     export ANSIBLE_BECOME=true
   fi
   
-  eval "${PLAYBOOKS[$i]}" || { echo "Error encountered during '${STEPS[$i]}'. Exiting."; exit 1; }
+  # Execute the playbook and capture the exit status
+  echo "Running: ${PLAYBOOKS[$i]}"
+  eval "${PLAYBOOKS[$i]}"
+  exit_status=$?
+  
+  # Store the result for summary reporting
+  if [ $exit_status -eq 0 ]; then
+    step_status[$i]="SUCCESS"
+  else
+    step_status[$i]="FAILED"
+    echo "Error encountered during '${STEPS[$i]}'."
+    
+    # Ask if user wants to continue despite error
+    echo -n "Continue with deployment? (y/n): "
+    read -r CONTINUE
+    if [[ ! "$CONTINUE" =~ ^[Yy]$ ]]; then
+      echo "Deployment aborted at step $((i+1))."
+      exit 1
+    fi
+  fi
 done
 
+# =============================================
+# Deployment Summary Report
+# =============================================
+print_section "DEPLOYMENT SUMMARY"
+echo "Deployment completed with the following results:"
+echo ""
+
+for (( i = START_INDEX; i <= END_INDEX; i++ )); do
+  status="${step_status[$i]:-SKIPPED}"
+  printf "  %2d. %-40s [%s]\n" $((i+1)) "${STEPS[$i]}" "$status"
+done
+
+echo ""
 print_section "DEPLOYMENT COMPLETE"
-echo "Deployment completed successfully!"
 echo "Verify the deployment with: kubectl get pods -A"
+
+# Display additional verification commands based on what was deployed
+if [ $END_INDEX -ge $GROUP_B_END ]; then
+  echo "Check Venafi components: kubectl get pods -n venafi-system"
+fi
+
+if [ $END_INDEX -ge $GROUP_D_END ]; then
+  echo "Verify identity configuration: kubectl get secretproviderclass -A"
+fi
+
+if [ $END_INDEX -ge $GROUP_E_END ]; then
+  echo "Access Service Mesh dashboard: istioctl dashboard kiali"
+fi
+
 echo "============================================="
