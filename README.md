@@ -211,7 +211,7 @@ The demo includes several certificate scenarios to demonstrate different aspects
 2. **Expiry Eddie**: Long-duration certificate demonstration (1 year)
 3. **Cipher-Snake**: Certificate with bad key size (1024-bit)
 4. **Ghost-Rider**: Orphaned certificate example
-5. **Phantom-CA**: Custom CA certificate demonstration
+5. **Phantom-CA**: Self-Signed CA certificate demonstration
 
 These scenarios help demonstrate certificate-related security risks and proper management practices.
 
